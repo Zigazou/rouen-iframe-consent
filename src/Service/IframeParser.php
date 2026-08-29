@@ -45,6 +45,14 @@ final class IframeParser {
   private const DIMENSION_IN_PIXELS_PATTERN = '/^\s*(\d{1,5})(?:px)?\s*$/i';
 
   /**
+   * A regex pattern that matches a percentage width.
+   *
+   * @var string
+   */
+  private const WIDTH_IN_PERCENT_PATTERN =
+    '/^\s*(\d{1,5}(?:\.\d{1,4})?%)\s*$/';
+
+  /**
    * A regex pattern that matches one or more whitespace characters.
    *
    * @var string
@@ -186,7 +194,7 @@ final class IframeParser {
     }
 
     $host = strtolower((string) parse_url($source, PHP_URL_HOST));
-    $width = $this->dimension($iframe->getAttribute('width'), 560);
+    $width = $this->width($iframe->getAttribute('width'), 560);
     $height = $this->dimension($iframe->getAttribute('height'), 315);
     $attributes = [
       'src' => $source,
@@ -311,6 +319,28 @@ final class IframeParser {
     $dimension = (int) $matches[1];
 
     return $dimension >= 1 && $dimension <= 10000 ? $dimension : $default;
+  }
+
+  /**
+   * Returns a bounded pixel width or a valid percentage width.
+   *
+   * @param string $value
+   *   The width value to parse.
+   * @param int $default
+   *   The default value to return if parsing fails.
+   *
+   * @return int|string
+   *   The parsed width, or the default if invalid.
+   */
+  private function width(string $value, int $default): int|string {
+    if (preg_match(self::WIDTH_IN_PERCENT_PATTERN, $value, $matches)) {
+      $percentage = (float) rtrim($matches[1], '%');
+      if ($percentage >= 1 && $percentage <= 10000) {
+        return $matches[1];
+      }
+    }
+
+    return $this->dimension($value, $default);
   }
 
   /**

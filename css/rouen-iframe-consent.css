@@ -1,10 +1,10 @@
 .rouen-iframe-consent {
   align-items     : center;
-  aspect-ratio    : var(--ric-ratio);
   background-color: #222;
   box-sizing      : border-box;
   color           : #fff;
   display         : flex;
+  height          : var(--ric-height);
   justify-content : center;
   max-width       : 100%;
   overflow        : hidden;

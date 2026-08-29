@@ -4,7 +4,7 @@
  * Consent placeholder displayed before a third-party iframe is loaded.
  */
 #}
-<div class="rouen-iframe-consent" style="--ric-width: {{ width }}px; --ric-ratio: {{ width }} / {{ height }};">
+<div class="rouen-iframe-consent" style="--ric-width: {{ width }}; --ric-height: {{ height }}px;">
   {% if thumbnail_url %}
     <img class="rouen-iframe-consent__thumbnail" src="{{ thumbnail_url }}" alt="">
   {% endif %}

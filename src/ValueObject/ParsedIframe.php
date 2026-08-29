@@ -20,8 +20,8 @@ final readonly class ParsedIframe {
    *   The iframe source host name.
    * @param string $providerName
    *   The iframe provider name.
-   * @param int $width
-   *   The iframe width in pixels.
+   * @param int|string $width
+   *   The iframe width in pixels or as a percentage.
    * @param int $height
    *   The iframe height in pixels.
    * @param array<string, string> $attributes
@@ -32,7 +32,7 @@ final readonly class ParsedIframe {
     public string $thumbnailLookupUrl,
     public string $host,
     public string $providerName,
-    public int $width,
+    public int|string $width,
     public int $height,
     public array $attributes,
   ) {}

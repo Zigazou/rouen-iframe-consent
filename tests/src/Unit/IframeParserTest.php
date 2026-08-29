@@ -121,8 +121,9 @@ final class IframeParserTest extends UnitTestCase {
     self::assertNotNull($iframe);
     self::assertSame('https://player.vimeo.com/video/42', $iframe->sourceUrl);
     self::assertSame('https://vimeo.com/42', $iframe->thumbnailLookupUrl);
-    self::assertSame(560, $iframe->width);
+    self::assertSame('100%', $iframe->width);
     self::assertSame(315, $iframe->height);
+    self::assertSame('100%', $iframe->attributes['width']);
     self::assertSame('allow-scripts', $iframe->attributes['sandbox']);
   }
 

@@ -11,7 +11,7 @@ The formatter:
   field;
 - discards every other HTML element and reconstructs the iframe from an
   allowlist of safe attributes;
-- reserves the iframe's aspect ratio to avoid layout shift;
+- reserves the iframe's dimensions to avoid layout shift;
 - shows a local thumbnail, an explanatory message, the provider name, and an **I
   accept** button;
 - creates the iframe in the browser only after the button is selected;

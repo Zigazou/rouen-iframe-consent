@@ -141,7 +141,6 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
         );
       }
 
-      $attributes['width'] = '100%';
       $attributes['height'] = '100%';
 
       $elements[$delta] = [
@@ -152,7 +151,9 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
           )
         ),
-        '#width' => $parsed->width,
+        '#width' => is_int($parsed->width)
+          ? $parsed->width . 'px'
+          : $parsed->width,
         '#height' => $parsed->height,
         '#provider' => $parsed->providerName,
         '#thumbnail_url' => $thumbnail_url,
