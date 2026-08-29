@@ -1,11 +1,11 @@
 .rouen-iframe-consent {
-  align-items     : center;
+  align-items     : end;
+  justify-content : end;
   background-color: #222;
   box-sizing      : border-box;
   color           : #fff;
   display         : flex;
   height          : var(--ric-height);
-  justify-content : center;
   max-width       : 100%;
   overflow        : hidden;
   position        : relative;
@@ -21,16 +21,16 @@
 }
 
 .rouen-iframe-consent__overlay {
+  display   : flex;
   background: rgb(0 0 0 / 72%);
   box-sizing: border-box;
-  max-width : 34rem;
-  padding   : 1.25rem;
+  padding   : 1rem;
+  gap       : 1rem;
   position  : relative;
-  text-align: center;
 }
 
 .rouen-iframe-consent__message {
-  margin-block: 0 1rem;
+  margin: 0;
 }
 
 .rouen-iframe-consent__accept {
