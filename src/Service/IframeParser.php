@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\rouen_iframe_consent\Service;
 
+use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\ThumbnailLookupUrlHandler;
 use Drupal\rouen_iframe_consent\ValueObject\ParsedIframe;
 
 /**
@@ -105,6 +106,34 @@ final class IframeParser {
     'twitter.com' => 'X (Twitter)',
     'x.com' => 'X (Twitter)',
   ];
+
+  /**
+   * Provider-specific thumbnail lookup URL handlers.
+   *
+   * @var ThumbnailLookupUrlHandler[]
+   */
+  private readonly array $thumbnailLookupUrlHandlers;
+
+  /**
+   * Creates an iframe parser.
+   *
+   * @param iterable<ThumbnailLookupUrlHandler> $thumbnailLookupUrlHandlers
+   *   Provider-specific thumbnail lookup URL handlers.
+   */
+  public function __construct(iterable $thumbnailLookupUrlHandlers) {
+    $handlers = [];
+    foreach ($thumbnailLookupUrlHandlers as $handler) {
+      if (!$handler instanceof ThumbnailLookupUrlHandler) {
+        throw new \LogicException(sprintf(
+          'Thumbnail lookup URL handlers must extend %s.',
+          ThumbnailLookupUrlHandler::class,
+        ));
+      }
+
+      $handlers[] = $handler;
+    }
+    $this->thumbnailLookupUrlHandlers = $handlers;
+  }
 
   /**
    * Parses the first iframe in an HTML fragment.
@@ -339,74 +368,14 @@ final class IframeParser {
    *   handling is needed.
    */
   private function getThumbnailLookupUrl(string $source, string $host): string {
-    $path = (string) parse_url($source, PHP_URL_PATH);
+    foreach ($this->thumbnailLookupUrlHandlers as $handler) {
+      $lookup_url = $handler->getThumbnailLookupUrl($source, $host);
 
-    // Handle YouTube URL.
-    if (
-      ($host === 'youtube.com'
-        || str_ends_with($host, '.youtube.com')
-        || str_ends_with($host, '.youtube-nocookie.com')
-      )
-      && preg_match('#/embed/([a-zA-Z0-9_-]+)#', $path, $matches)) {
-
-      return 'https://www.youtube.com/watch?v=' . $matches[1];
+      if ($lookup_url !== NULL) {
+        return $lookup_url;
+      }
     }
 
-    // Handle Dailymotion URL.
-    if (
-      ($host === 'dailymotion.com'
-        || str_ends_with($host, '.dailymotion.com')
-      )
-      && preg_match('#/embed/video/([a-zA-Z0-9]+)#', $path, $matches)
-    ) {
-      return 'https://www.dailymotion.com/video/' . $matches[1];
-    }
-
-    // Handle Vimeo URL.
-    if (
-      ($host === 'player.vimeo.com')
-      && preg_match('#/video/(\d+)#', $path, $matches)
-    ) {
-      return 'https://vimeo.com/' . $matches[1];
-    }
-
-    // Handle Facebook URL.
-    if (
-      ($host === 'facebook.com'
-        || str_ends_with($host, '.facebook.com')
-        || str_ends_with($host, '.fbcdn.net')
-      )
-      && preg_match('#/plugins/video\.php#', $path)
-      && ($href = $this->getQueryParameter($source, 'href')) !== NULL
-    ) {
-      return $href;
-    }
-
-    // Handle Instagram URL.
-    if (
-      ($host === 'instagram.com'
-        || str_ends_with($host, '.instagram.com')
-        || str_ends_with($host, '.cdninstagram.com')
-      )
-      && preg_match('#/embed/#', $path)
-      && ($src = $this->getQueryParameter($source, 'src')) !== NULL
-    ) {
-      return $src;
-    }
-
-    // Handle X (Twitter) URL.
-    if (
-      ($host === 'x.com'
-        || str_ends_with($host, '.x.com')
-        || str_ends_with($host, '.twitter.com')
-      )
-      && preg_match('#/widgets/tweet_button\.html#', $path)
-      && ($url = $this->getQueryParameter($source, 'url')) !== NULL
-    ) {
-      return $url;
-    }
-
-    // Return the original source URL if no special handling is needed.
     return $source;
   }
 

@@ -5,6 +5,8 @@ services:
 
   rouen_iframe_consent.iframe_parser:
     class: Drupal\rouen_iframe_consent\Service\IframeParser
+    arguments:
+      - !tagged_iterator rouen_iframe_consent.thumbnail_lookup_url_handler
 
   rouen_iframe_consent.thumbnail_manager:
     class: Drupal\rouen_iframe_consent\Service\ThumbnailManager
