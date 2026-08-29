@@ -18,6 +18,22 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 final class SettingsForm extends ConfigFormBase {
 
   /**
+   * Valid hostname pattern for trusted hosts.
+   *
+   * @var string
+   */
+  private const VALID_HOSTNAME_PATTERN =
+      '/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*' .
+      '[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/';
+
+  /**
+   * A regex pattern that matches any newline character sequence.
+   *
+   * @var string
+   */
+  private const NEWLINE_PATTERN = '/\R/';
+
+  /**
    * Creates the settings form.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
@@ -72,6 +88,7 @@ final class SettingsForm extends ConfigFormBase {
     FormStateInterface $form_state,
   ): array {
     $config = $this->config('rouen_iframe_consent.settings');
+
     $form['trusted_hosts'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Trusted sites'),
@@ -80,7 +97,9 @@ final class SettingsForm extends ConfigFormBase {
       ),
       '#default_value' => implode("\n", $config->get('trusted_hosts') ?: []),
     ];
+
     $fallback_fid = (int) $config->get('fallback_image_fid');
+
     $form['fallback_image_fid'] = [
       '#type' => 'managed_file',
       '#title' => $this->t('Generic preview image'),
@@ -94,6 +113,7 @@ final class SettingsForm extends ConfigFormBase {
         'FileSizeLimit' => ['fileLimit' => 5_242_880],
       ],
     ];
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -107,21 +127,18 @@ final class SettingsForm extends ConfigFormBase {
     parent::validateForm($form, $form_state);
 
     $hosts = preg_split(
-      '/\R/',
+      self::NEWLINE_PATTERN,
       (string) $form_state->getValue('trusted_hosts'),
       -1,
       PREG_SPLIT_NO_EMPTY
     ) ?: [];
 
-    // Validate host names using a regex pattern that matches valid host names.
-    $hostname_pattern =
-      '/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*' .
-      '[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/';
-
+    // Validate host names.
     $normalized = [];
     foreach ($hosts as $host) {
       $host = strtolower(rtrim(trim($host), '.'));
-      if (!preg_match($hostname_pattern, $host)) {
+
+      if (!preg_match(self::VALID_HOSTNAME_PATTERN, $host)) {
         $form_state->setErrorByName(
           'trusted_hosts',
           $this->t('%host is not a valid host name.', ['%host' => $host])
@@ -149,8 +166,7 @@ final class SettingsForm extends ConfigFormBase {
 
     if ($new_fid !== $old_fid) {
       if ($old_fid > 0) {
-        $old_file = $this
-          ->entityTypeManager
+        $old_file = $this->entityTypeManager
           ->getStorage('file')
           ->load($old_fid);
 
@@ -175,6 +191,7 @@ final class SettingsForm extends ConfigFormBase {
         if ($new_file) {
           $new_file->setPermanent();
           $new_file->save();
+
           $this->fileUsage->add(
             $new_file,
             'rouen_iframe_consent',
@@ -189,6 +206,7 @@ final class SettingsForm extends ConfigFormBase {
       ->set('trusted_hosts', $form_state->getValue('trusted_hosts'))
       ->set('fallback_image_fid', $new_fid)
       ->save();
+
     parent::submitForm($form, $form_state);
   }
 

@@ -111,6 +111,7 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
 
       if ($this->iframeParser->isTrustedHost($parsed->host, $trusted_hosts)) {
         $attributes['class'] = ['rouen-iframe-consent__trusted'];
+
         $elements[$delta] = [
           '#type' => 'html_tag',
           '#tag' => 'iframe',
@@ -123,6 +124,7 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
             'tags' => ['config:rouen_iframe_consent.settings'],
           ],
         ];
+
         continue;
       }
 
@@ -132,6 +134,7 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
         (int) $delta,
         $parsed,
       );
+
       if ($thumbnail_url === NULL) {
         $thumbnail_url = $this->getFallbackImageUrl(
           (int) $settings->get('fallback_image_fid')
