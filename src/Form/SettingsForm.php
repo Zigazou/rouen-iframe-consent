@@ -93,7 +93,7 @@ final class SettingsForm extends ConfigFormBase {
       '#type' => 'textarea',
       '#title' => $this->t('Trusted sites'),
       '#description' => $this->t(
-        'Enter one host name per line, without a path (for example, media.example.org). Iframes from these hosts and their subdomains are loaded without asking for consent.'
+        'Enter one host name per line, without a path (for example, media.example.org). Embeds from these hosts and their subdomains are loaded without asking for consent.'
       ),
       '#default_value' => implode("\n", $config->get('trusted_hosts') ?: []),
     ];

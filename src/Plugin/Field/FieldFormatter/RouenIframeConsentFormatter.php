@@ -13,17 +13,20 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Render\Markup;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\rouen_iframe_consent\Service\IframeParser;
 use Drupal\rouen_iframe_consent\Service\ThumbnailManager;
+use Drupal\rouen_iframe_consent\ValueObject\ParsedBlockquote;
+use Drupal\rouen_iframe_consent\ValueObject\ParsedIframe;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Displays a consent placeholder before loading a third-party iframe.
+ * Displays a consent placeholder before loading a third-party embed.
  */
 #[FieldFormatter(
   id: 'rouen_iframe_consent',
-  label: new TranslatableMarkup('Iframe with individual consent'),
+  label: new TranslatableMarkup('External embed with individual consent'),
   field_types: ['text', 'text_long', 'text_with_summary'],
 )]
 final class RouenIframeConsentFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
@@ -109,6 +112,46 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
         continue;
       }
 
+      $is_trusted = $this->iframeParser->isTrustedHost(
+        $parsed->host,
+        $trusted_hosts,
+      );
+
+      if ($parsed instanceof ParsedBlockquote) {
+        $elements[$delta] = [
+          '#theme' => 'rouen_iframe_consent_placeholder',
+          '#embed_type' => 'blockquote',
+          '#preview_html' => Markup::create($parsed->previewHtml),
+          '#script_attributes' => $this->encodeAttributes(
+            $parsed->scriptAttributes,
+          ),
+          '#autoload' => $is_trusted,
+          '#width' => is_int($parsed->width)
+            ? $parsed->width . 'px'
+            : $parsed->width,
+          '#height' => $parsed->height,
+          '#provider' => $parsed->providerName,
+          '#message' => str_replace(
+            '@provider',
+            $parsed->providerName,
+            $consent_message,
+          ),
+          '#button_label' => $consent_button_label,
+          '#attached' => [
+            'library' => ['rouen_iframe_consent/consent'],
+          ],
+          '#cache' => [
+            'tags' => ['config:rouen_iframe_consent.settings'],
+          ],
+        ];
+
+        continue;
+      }
+
+      if (!$parsed instanceof ParsedIframe) {
+        continue;
+      }
+
       // Prepare the iframe attributes, ensuring a title is set for
       // accessibility.
       $attributes = $parsed->attributes;
@@ -121,7 +164,7 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
 
       // If the host is trusted, render the iframe directly with a special
       // class.
-      if ($this->iframeParser->isTrustedHost($parsed->host, $trusted_hosts)) {
+      if ($is_trusted) {
         $attributes['class'] = ['rouen-iframe-consent__trusted'];
 
         $elements[$delta] = [
@@ -176,12 +219,8 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
       // localized strings.
       $elements[$delta] = [
         '#theme' => 'rouen_iframe_consent_placeholder',
-        '#iframe_attributes' => base64_encode(
-          (string) json_encode(
-            $attributes,
-            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
-          )
-        ),
+        '#embed_type' => 'iframe',
+        '#iframe_attributes' => $this->encodeAttributes($attributes),
         '#width' => is_int($parsed->width)
           ? $parsed->width . 'px'
           : $parsed->width,
@@ -204,6 +243,22 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
     }
 
     return $elements;
+  }
+
+  /**
+   * Encodes sanitized element attributes for safe client-side reconstruction.
+   *
+   * @param array<string, string|bool> $attributes
+   *   Sanitized element attributes.
+   *
+   * @return string
+   *   A base64-encoded JSON string of the attributes.
+   */
+  private function encodeAttributes(array $attributes): string {
+    return base64_encode((string) json_encode(
+      $attributes,
+      JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
+    ));
   }
 
   /**

@@ -343,7 +343,7 @@ final class ThumbnailManager {
         $parsed = $this->iframeParser->parse((string) $item->value);
 
         if (
-          $parsed === NULL
+          !($parsed instanceof ParsedIframe)
           || $this->iframeParser->isTrustedHost($parsed->host, $trusted_hosts)
         ) {
           continue;

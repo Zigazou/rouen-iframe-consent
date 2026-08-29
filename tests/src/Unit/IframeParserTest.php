@@ -11,6 +11,7 @@ use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\InstagramThumb
 use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\VimeoThumbnailLookupUrlHandler;
 use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\XThumbnailLookupUrlHandler;
 use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\YouTubeThumbnailLookupUrlHandler;
+use Drupal\rouen_iframe_consent\ValueObject\ParsedBlockquote;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -239,6 +240,144 @@ final class IframeParserTest extends UnitTestCase {
     self::assertFalse(
       $this->parser->isTrustedHost('evil-example.org', ['example.org'])
     );
+  }
+
+  /**
+   * Tests supported blockquote embed extraction.
+   */
+  #[DataProvider('blockquoteEmbedProvider')]
+  public function testBlockquoteEmbedExtraction(
+    string $html,
+    string $provider,
+    string $script_source,
+  ): void {
+    $embed = $this->parser->parse($html);
+
+    self::assertInstanceOf(ParsedBlockquote::class, $embed);
+    self::assertSame($provider, $embed->providerName);
+    self::assertSame($script_source, $embed->sourceUrl);
+    self::assertSame($script_source, $embed->scriptAttributes['src']);
+    self::assertTrue($embed->scriptAttributes['async']);
+    self::assertStringContainsString(
+      'data-rouen-embed-class=',
+      $embed->previewHtml,
+    );
+  }
+
+  /**
+   * Provides supported blockquote embed codes.
+   *
+   * @return array<string, array{string, string, string}>
+   *   Provider embed cases.
+   */
+  public static function blockquoteEmbedProvider(): array {
+    return [
+      'Instagram' => [
+        '<blockquote class="instagram-media" '
+        . 'data-instgrm-permalink="https://www.instagram.com/p/ABC123/" '
+        . 'data-instgrm-version="14"><p>Post</p></blockquote>'
+        . '<script async src="//www.instagram.com/embed.js"></script>',
+        'Instagram',
+        'https://www.instagram.com/embed.js',
+      ],
+      'TikTok' => [
+        '<blockquote class="tiktok-embed" '
+        . 'cite="https://www.tiktok.com/@example/video/123" '
+        . 'data-video-id="123"><section>Video</section></blockquote>'
+        . '<script async src="https://www.tiktok.com/embed.js"></script>',
+        'TikTok',
+        'https://www.tiktok.com/embed.js',
+      ],
+      'X' => [
+        '<blockquote class="twitter-tweet"><p>Post</p>'
+        . '<a href="https://twitter.com/example/status/123">Date</a>'
+        . '</blockquote><script async '
+        . 'src="https://platform.x.com/widgets.js" '
+        . 'charset="utf-8"></script>',
+        'X (Twitter)',
+        'https://platform.x.com/widgets.js',
+      ],
+      'Bluesky' => [
+        '<blockquote class="bluesky-embed" '
+        . 'data-bluesky-uri="at://did:plc:abc/app.bsky.feed.post/123" '
+        . 'data-bluesky-cid="bafy123"><p>Post</p></blockquote>'
+        . '<script async '
+        . 'src="https://embed.bsky.app/static/embed.js"></script>',
+        'Bluesky',
+        'https://embed.bsky.app/static/embed.js',
+      ],
+    ];
+  }
+
+  /**
+   * Tests that preview HTML is inert and strips unsafe markup.
+   */
+  public function testBlockquotePreviewSanitization(): void {
+    $html = '<blockquote class="twitter-tweet extra" style="color:red" '
+      . 'onclick="alert(1)"><p>Safe <strong>text</strong>'
+      . '<script>alert(1)</script><img src="https://tracker.example/pixel">'
+      . '<a href="https://x.com/example/status/123" target="_blank" '
+      . 'onclick="alert(2)">Read it</a></p></blockquote>'
+      . '<script async src="https://platform.twitter.com/widgets.js">'
+      . '</script>';
+
+    $embed = $this->parser->parse($html);
+
+    self::assertInstanceOf(ParsedBlockquote::class, $embed);
+    self::assertStringContainsString(
+      '<strong>text</strong>',
+      $embed->previewHtml,
+    );
+    self::assertStringContainsString(
+      'data-rouen-embed-href="https://x.com/example/status/123"',
+      $embed->previewHtml,
+    );
+    self::assertStringNotContainsString(' style=', $embed->previewHtml);
+    self::assertStringNotContainsString(' onclick=', $embed->previewHtml);
+    self::assertStringNotContainsString(' target=', $embed->previewHtml);
+    self::assertStringNotContainsString(' href=', $embed->previewHtml);
+    self::assertStringNotContainsString('<script', $embed->previewHtml);
+    self::assertStringNotContainsString('<img', $embed->previewHtml);
+  }
+
+  /**
+   * Tests rejection of unrecognized or mismatched provider scripts.
+   */
+  #[DataProvider('unsafeBlockquoteProvider')]
+  public function testUnsafeBlockquoteEmbedsAreRejected(string $html): void {
+    self::assertNull($this->parser->parse($html));
+  }
+
+  /**
+   * Provides unsafe blockquote embed codes.
+   *
+   * @return array<string, array{string}>
+   *   Unsafe embed cases.
+   */
+  public static function unsafeBlockquoteProvider(): array {
+    return [
+      'Arbitrary script' => [
+        '<blockquote class="twitter-tweet">Post</blockquote>'
+        . '<script src="https://evil.example/widgets.js"></script>',
+      ],
+      'Provider class mismatch' => [
+        '<blockquote class="instagram-media">Post</blockquote>'
+        . '<script src="https://platform.twitter.com/widgets.js"></script>',
+      ],
+      'Insecure script' => [
+        '<blockquote class="twitter-tweet">Post</blockquote>'
+        . '<script src="http://platform.twitter.com/widgets.js"></script>',
+      ],
+      'Script URL query' => [
+        '<blockquote class="twitter-tweet">Post</blockquote>'
+        . '<script src="https://platform.twitter.com/widgets.js?callback=x">'
+        . '</script>',
+      ],
+      'Non-adjacent script' => [
+        '<blockquote class="twitter-tweet">Post</blockquote><p>Gap</p>'
+        . '<script src="https://platform.twitter.com/widgets.js"></script>',
+      ],
+    ];
   }
 
 }

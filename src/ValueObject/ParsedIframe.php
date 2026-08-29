@@ -7,7 +7,7 @@ namespace Drupal\rouen_iframe_consent\ValueObject;
 /**
  * Immutable, sanitized iframe data.
  */
-final readonly class ParsedIframe {
+final readonly class ParsedIframe extends ParsedEmbed {
 
   /**
    * Creates parsed iframe data.
@@ -28,23 +28,22 @@ final readonly class ParsedIframe {
    *   The iframe attributes.
    */
   public function __construct(
-    public string $sourceUrl,
-    public string $thumbnailLookupUrl,
-    public string $host,
-    public string $providerName,
-    public int|string $width,
-    public int $height,
+    string $sourceUrl,
+    string $thumbnailLookupUrl,
+    string $host,
+    string $providerName,
+    int|string $width,
+    int $height,
     public array $attributes,
-  ) {}
-
-  /**
-   * Returns a stable hash of the iframe source.
-   *
-   * @return string
-   *   A SHA-256 hash of the iframe source URL.
-   */
-  public function getSourceHash(): string {
-    return hash('sha256', $this->sourceUrl);
+  ) {
+    parent::__construct(
+      $sourceUrl,
+      $thumbnailLookupUrl,
+      $host,
+      $providerName,
+      $width,
+      $height,
+    );
   }
 
 }

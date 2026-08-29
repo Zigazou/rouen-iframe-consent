@@ -20,6 +20,40 @@
   width     : 100%;
 }
 
+.rouen-iframe-consent__preview {
+  background: #fff;
+  box-sizing: border-box;
+  color     : #222;
+  height    : 100%;
+  inset     : 0;
+  overflow  : auto;
+  padding   : 1rem;
+  position  : absolute;
+  width     : 100%;
+}
+
+.rouen-iframe-consent--blockquote {
+  display   : block;
+  height    : auto;
+  min-height: var(--ric-height);
+  overflow  : visible;
+}
+
+.rouen-iframe-consent--blockquote .rouen-iframe-consent__preview {
+  min-height: var(--ric-height);
+  position  : relative;
+}
+
+.rouen-iframe-consent--blockquote .rouen-iframe-consent__overlay {
+  bottom  : 0;
+  position: absolute;
+  right   : 0;
+}
+
+.rouen-iframe-consent__preview blockquote {
+  margin: 0;
+}
+
 .rouen-iframe-consent__overlay {
   display   : flex;
   background: rgb(0 0 0 / 72%);

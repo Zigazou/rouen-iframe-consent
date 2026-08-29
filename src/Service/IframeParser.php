@@ -6,20 +6,70 @@ namespace Drupal\rouen_iframe_consent\Service;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\ThumbnailLookupUrlHandler;
+use Drupal\rouen_iframe_consent\ValueObject\ParsedBlockquote;
+use Drupal\rouen_iframe_consent\ValueObject\ParsedEmbed;
 use Drupal\rouen_iframe_consent\ValueObject\ParsedIframe;
 
 /**
- * Extracts and sanitizes a single iframe from an HTML field value.
+ * Extracts and sanitizes a single external embed from an HTML field value.
  *
- * This service is responsible for parsing an HTML fragment, locating the first
- * iframe element, and extracting its attributes. It also performs validation
- * and sanitization of the iframe's source URL, dimensions, and other attributes
- * to ensure they are safe and conform to expected formats.
+ * This service parses an HTML fragment, locating either the first iframe or a
+ * supported blockquote-and-script integration. It validates external URLs and
+ * rebuilds the retained markup from explicit element and attribute allowlists.
  *
- * The result is returned as a ParsedIframe value object, which can be used by
- * other services or controllers to render the iframe with consent management.
+ * The result can be rendered without contacting its provider until consent.
  */
 final class IframeParser {
+
+  /**
+   * Supported provider script endpoints and their display names.
+   *
+   * The path is matched exactly. Arbitrary third-party JavaScript must never
+   * be accepted because embed scripts execute in the first-party page context.
+   *
+   * @var array<string, array<string, string>>
+   */
+  private const SUPPORTED_SCRIPT_ENDPOINTS = [
+    'www.instagram.com' => ['/embed.js' => 'Instagram'],
+    'www.tiktok.com' => ['/embed.js' => 'TikTok'],
+    'platform.x.com' => ['/widgets.js' => 'X (Twitter)'],
+    'platform.twitter.com' => ['/widgets.js' => 'X (Twitter)'],
+    'embed.bsky.app' => ['/static/embed.js' => 'Bluesky'],
+  ];
+
+  /**
+   * Provider classes required on the root blockquote.
+   *
+   * @var array<string, string>
+   */
+  private const PROVIDER_BLOCKQUOTE_CLASSES = [
+    'Instagram' => 'instagram-media',
+    'TikTok' => 'tiktok-embed',
+    'X (Twitter)' => 'twitter-tweet',
+    'Bluesky' => 'bluesky-embed',
+  ];
+
+  /**
+   * Elements retained in blockquote previews.
+   *
+   * @var string[]
+   */
+  private const ALLOWED_PREVIEW_ELEMENTS = [
+    'blockquote',
+    'div',
+    'p',
+    'span',
+    'section',
+    'cite',
+    'time',
+    'br',
+    'strong',
+    'em',
+    'b',
+    'i',
+    'small',
+    'a',
+  ];
 
   /**
    * A regex pattern that matches allowed characters in the allow attribute.
@@ -119,7 +169,7 @@ final class IframeParser {
   /**
    * Provider-specific thumbnail lookup URL handlers.
    *
-   * @var ThumbnailLookupUrlHandler[]
+   * @var \Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\ThumbnailLookupUrlHandler[]
    */
   private readonly array $thumbnailLookupUrlHandlers;
 
@@ -150,16 +200,20 @@ final class IframeParser {
   }
 
   /**
-   * Parses the first iframe in an HTML fragment.
+   * Parses the first supported embed in an HTML fragment.
    *
    * @param string $html
    *   The HTML fragment to parse.
    *
-   * @return \Drupal\rouen_iframe_consent\ValueObject\ParsedIframe|null
-   *   A parsed iframe object, or NULL if no valid iframe was found.
+   * @return \Drupal\rouen_iframe_consent\ValueObject\ParsedEmbed|null
+   *   A parsed embed object, or NULL if no valid embed was found.
    */
-  public function parse(string $html): ?ParsedIframe {
-    if (trim($html) === '' || stripos($html, '<iframe') === FALSE) {
+  public function parse(string $html): ?ParsedEmbed {
+    // Skip parsing if the HTML is empty or contains no iframe or blockquote.
+    if (trim($html) === '' || (
+      stripos($html, '<iframe') === FALSE
+      && stripos($html, '<blockquote') === FALSE
+    )) {
       return NULL;
     }
 
@@ -181,10 +235,23 @@ final class IframeParser {
     }
 
     $iframe = $document->getElementsByTagName('iframe')->item(0);
-    if (!$iframe instanceof \DOMElement) {
-      return NULL;
+    if ($iframe instanceof \DOMElement) {
+      return $this->parseIframeElement($iframe);
     }
 
+    return $this->parseBlockquoteEmbed($document);
+  }
+
+  /**
+   * Parses a sanitized iframe element.
+   *
+   * @param \DOMElement $iframe
+   *   The iframe element to parse.
+   *
+   * @return \Drupal\rouen_iframe_consent\ValueObject\ParsedIframe|null
+   *   A parsed iframe object, or NULL if the iframe is invalid or unsafe.
+   */
+  private function parseIframeElement(\DOMElement $iframe): ?ParsedIframe {
     $source = html_entity_decode(
       trim($iframe->getAttribute('src')),
       ENT_QUOTES | ENT_HTML5,
@@ -200,14 +267,17 @@ final class IframeParser {
     }
 
     $host = strtolower((string) parse_url($source, PHP_URL_HOST));
+
     $width = $this->width(
       $iframe->getAttribute('width'),
       $this->defaultDimension('default_width', 560),
     );
+
     $height = $this->dimension(
       $iframe->getAttribute('height'),
       $this->defaultDimension('default_height', 315),
     );
+
     $attributes = [
       'src' => $source,
       'width' => (string) $width,
@@ -254,6 +324,271 @@ final class IframeParser {
       $height,
       $attributes,
     );
+  }
+
+  /**
+   * Parses a blockquote immediately followed by a supported provider script.
+   *
+   * The script must be a known provider endpoint and the blockquote must
+   * contain the expected provider class. The blockquote is sanitized to
+   * remove any potentially executable markup, leaving only inert, allowlisted
+   * elements and attributes.
+   *
+   * @param \DOMDocument $document
+   *   The DOM document containing the blockquote and script.
+   *
+   * @return \Drupal\rouen_iframe_consent\ValueObject\ParsedBlockquote|null
+   *   A parsed blockquote object, or NULL if no valid blockquote embed is
+   *   found.
+   */
+  private function parseBlockquoteEmbed(
+    \DOMDocument $document,
+  ): ?ParsedBlockquote {
+    foreach ($document->getElementsByTagName('blockquote') as $blockquote) {
+      if (!$blockquote instanceof \DOMElement) {
+        continue;
+      }
+
+      $sibling = $blockquote->nextSibling;
+      while ($sibling !== NULL && !($sibling instanceof \DOMElement)) {
+        $sibling = $sibling->nextSibling;
+      }
+
+      if (!$sibling instanceof \DOMElement
+        || strtolower($sibling->tagName) !== 'script'
+      ) {
+        continue;
+      }
+
+      $source = html_entity_decode(
+        trim($sibling->getAttribute('src')),
+        ENT_QUOTES | ENT_HTML5,
+        'UTF-8',
+      );
+      if (str_starts_with($source, '//')) {
+        $source = 'https:' . $source;
+      }
+
+      $provider = $this->getScriptProvider($source);
+      if ($provider === NULL || !$this->hasProviderClass(
+        $blockquote,
+        self::PROVIDER_BLOCKQUOTE_CLASSES[$provider],
+      )) {
+        continue;
+      }
+
+      $preview = $this->sanitizePreview($blockquote);
+      if ($preview === '') {
+        continue;
+      }
+
+      $script_attributes = ['src' => $source];
+      if ($sibling->hasAttribute('async')) {
+        $script_attributes['async'] = TRUE;
+      }
+      if ($sibling->hasAttribute('defer')) {
+        $script_attributes['defer'] = TRUE;
+      }
+      if (strtolower(trim($sibling->getAttribute('charset'))) === 'utf-8') {
+        $script_attributes['charset'] = 'utf-8';
+      }
+
+      $host = strtolower((string) parse_url($source, PHP_URL_HOST));
+      return new ParsedBlockquote(
+        $source,
+        $host,
+        $provider,
+        $this->defaultDimension('default_width', 560),
+        $this->defaultDimension('default_height', 315),
+        $preview,
+        $script_attributes,
+      );
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Returns the provider for a strictly supported script URL.
+   *
+   * @param string $source
+   *   The script URL to check.
+   *
+   * @return string|null
+   *   The provider name, or NULL if the script is not supported.
+   */
+  private function getScriptProvider(string $source): ?string {
+    if (!$this->isSafeUrl($source)) {
+      return NULL;
+    }
+
+    $parts = parse_url($source);
+    if (strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+      || isset($parts['query'])
+      || isset($parts['fragment'])
+    ) {
+      return NULL;
+    }
+
+    $host = strtolower((string) ($parts['host'] ?? ''));
+    $path = (string) ($parts['path'] ?? '');
+
+    return self::SUPPORTED_SCRIPT_ENDPOINTS[$host][$path] ?? NULL;
+  }
+
+  /**
+   * Determines whether an element contains the expected provider class.
+   *
+   * @param \DOMElement $element
+   *   The element to check.
+   * @param string $requiredClass
+   *   The required class name.
+   *
+   * @return bool
+   *   TRUE if the element contains the required class, FALSE otherwise.
+   */
+  private function hasProviderClass(
+    \DOMElement $element,
+    string $requiredClass,
+  ): bool {
+    $classes = preg_split(
+      self::SPACES_PATTERN,
+      trim($element->getAttribute('class')),
+      -1,
+      PREG_SPLIT_NO_EMPTY,
+    ) ?: [];
+
+    return in_array($requiredClass, $classes, TRUE);
+  }
+
+  /**
+   * Builds a new preview tree containing only inert, allowlisted markup.
+   */
+  private function sanitizePreview(\DOMElement $source): string {
+    $document = new \DOMDocument('1.0', 'UTF-8');
+    $preview = $this->copyPreviewNode($source, $document);
+    if (!$preview instanceof \DOMElement) {
+      return '';
+    }
+
+    $document->appendChild($preview);
+    return (string) $document->saveHTML($preview);
+  }
+
+  /**
+   * Recursively copies safe preview markup into a clean document.
+   *
+   * @param \DOMNode $source
+   *   The source node to copy.
+   * @param \DOMDocument $document
+   *   The target document.
+   *
+   * @return \DOMNode|null
+   *   The copied node, or NULL if the node is not allowed.
+   */
+  private function copyPreviewNode(
+    \DOMNode $source,
+    \DOMDocument $document,
+  ): ?\DOMNode {
+    if ($source instanceof \DOMText) {
+      return $document->createTextNode($source->data);
+    }
+
+    if (!$source instanceof \DOMElement) {
+      return NULL;
+    }
+
+    $tag = strtolower($source->tagName);
+    if (!in_array($tag, self::ALLOWED_PREVIEW_ELEMENTS, TRUE)) {
+      return NULL;
+    }
+
+    $copy = $document->createElement($tag);
+    $this->copyPreviewAttributes($source, $copy);
+
+    foreach ($source->childNodes as $child) {
+      $safe_child = $this->copyPreviewNode($child, $document);
+      if ($safe_child !== NULL) {
+        $copy->appendChild($safe_child);
+      }
+    }
+
+    return $copy;
+  }
+
+  /**
+   * Copies only attributes needed by the supported provider integrations.
+   *
+   * @param \DOMElement $source
+   *   The source element to copy attributes from.
+   * @param \DOMElement $copy
+   *   The target element to copy attributes to.
+   */
+  private function copyPreviewAttributes(
+    \DOMElement $source,
+    \DOMElement $copy,
+  ): void {
+    $class_tokens = preg_split(
+      self::SPACES_PATTERN,
+      trim($source->getAttribute('class')),
+      -1,
+      PREG_SPLIT_NO_EMPTY,
+    ) ?: [];
+    $class_tokens = array_filter(
+      $class_tokens,
+      static fn(string $token): bool => (bool) preg_match(
+        '/^[a-z0-9_-]{1,80}$/i',
+        $token,
+      ),
+    );
+    if ($class_tokens !== []) {
+      $copy->setAttribute(
+        'data-rouen-embed-class',
+        implode(' ', $class_tokens),
+      );
+    }
+
+    $url_attributes = ['cite', 'data-instgrm-permalink'];
+    foreach ($url_attributes as $attribute) {
+      $value = trim($source->getAttribute($attribute));
+      if ($value !== '' && $this->isSafeUrl($value)) {
+        $copy->setAttribute(
+          'data-rouen-embed-' . str_replace('data-', '', $attribute),
+          $value,
+        );
+      }
+    }
+
+    if (strtolower($source->tagName) === 'a') {
+      $href = trim($source->getAttribute('href'));
+      if ($this->isSafeUrl($href)) {
+        $copy->setAttribute('data-rouen-embed-href', $href);
+      }
+    }
+
+    $token_attributes = [
+      'data-instgrm-version' => '/^\d{1,3}$/',
+      'data-video-id' => '/^[a-z0-9_-]{1,128}$/i',
+      'data-unique-id' => '/^[a-z0-9._-]{1,128}$/i',
+      'data-embed-type' => '/^[a-z0-9_-]{1,40}$/i',
+      'data-embed-from' => '/^[a-z0-9_-]{1,40}$/i',
+      'data-bluesky-uri' => '/^at:\/\/[a-z0-9._:%\/-]{1,500}$/i',
+      'data-bluesky-cid' => '/^[a-z0-9]{1,128}$/i',
+      'data-bluesky-embed-color-mode' => '/^(?:light|dark|system)$/',
+    ];
+    foreach ($token_attributes as $attribute => $pattern) {
+      $value = trim($source->getAttribute($attribute));
+      if ($value !== '' && preg_match($pattern, $value)) {
+        $copy->setAttribute(
+          'data-rouen-embed-' . str_replace('data-', '', $attribute),
+          $value,
+        );
+      }
+    }
+
+    if ($source->hasAttribute('data-instgrm-captioned')) {
+      $copy->setAttribute('data-rouen-embed-instgrm-captioned', '');
+    }
   }
 
   /**
@@ -363,7 +698,8 @@ final class IframeParser {
   private function defaultDimension(string $key, int $fallback): int {
     $value = (int) ($this->configFactory
       ?->get('rouen_iframe_consent.settings')
-      ->get($key) ?? $fallback);
+        ->get($key) ?? $fallback
+    );
 
     return $value >= 1 && $value <= 10000 ? $value : $fallback;
   }

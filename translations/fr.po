@@ -18,8 +18,8 @@ msgid "Rouen Iframe Consent"
 msgstr "Consentement aux iframes de Rouen"
 
 #: rouen_iframe_consent.info.yml:3
-msgid "Displays privacy-preserving consent placeholders before loading third-party iframes."
-msgstr "Affiche des écrans de consentement respectueux de la vie privée avant le chargement d’iframes tierces."
+msgid "Displays privacy-preserving consent placeholders before loading third-party embeds."
+msgstr "Affiche des écrans de consentement respectueux de la vie privée avant le chargement de contenus tiers."
 
 #: rouen_iframe_consent.info.yml:4
 msgid "Custom"
@@ -58,8 +58,8 @@ msgid "Rouen Iframe Consent thumbnail retrieval"
 msgstr "Récupération des miniatures de Consentement aux iframes de Rouen"
 
 #: src/Plugin/Field/FieldFormatter/RouenIframeConsentFormatter.php:26
-msgid "Iframe with individual consent"
-msgstr "Iframe avec consentement individuel"
+msgid "External embed with individual consent"
+msgstr "Contenu externe avec consentement individuel"
 
 #: src/Plugin/Field/FieldFormatter/RouenIframeConsentFormatter.php:107
 msgid "External content from @provider"
@@ -78,8 +78,8 @@ msgid "Trusted sites"
 msgstr "Sites de confiance"
 
 #: src/Form/SettingsForm.php:96
-msgid "Enter one host name per line, without a path (for example, media.example.org). Iframes from these hosts and their subdomains are loaded without asking for consent."
-msgstr "Saisissez un nom d’hôte par ligne, sans chemin (par exemple media.example.org). Les iframes provenant de ces hôtes et de leurs sous-domaines sont chargées sans demander de consentement."
+msgid "Enter one host name per line, without a path (for example, media.example.org). Embeds from these hosts and their subdomains are loaded without asking for consent."
+msgstr "Saisissez un nom d’hôte par ligne, sans chemin (par exemple media.example.org). Les contenus provenant de ces hôtes et de leurs sous-domaines sont chargés sans demander de consentement."
 
 #: src/Form/SettingsForm.php:105
 msgid "Generic preview image"
