@@ -128,6 +128,19 @@ final class IframeParserTest extends UnitTestCase {
   }
 
   /**
+   * Tests that percentage widths cannot exceed the containing element.
+   */
+  public function testPercentageWidthIsBounded(): void {
+    $iframe = $this->parser->parse(
+      '<iframe src="https://example.com/embed" width="101%"></iframe>'
+    );
+
+    self::assertNotNull($iframe);
+    self::assertSame(560, $iframe->width);
+    self::assertSame('560', $iframe->attributes['width']);
+  }
+
+  /**
    * Tests provider-specific thumbnail lookup URL handling.
    */
   #[DataProvider('thumbnailLookupUrlProvider')]

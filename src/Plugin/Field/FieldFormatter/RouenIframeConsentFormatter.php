@@ -95,12 +95,17 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
     $settings = $this->configFactory->get('rouen_iframe_consent.settings');
     $trusted_hosts = $settings->get('trusted_hosts') ?: [];
 
+    // Iterate over each field item and generate the appropriate render array.
     foreach ($items as $delta => $item) {
       $parsed = $this->iframeParser->parse((string) $item->value);
+
+      // If the iframe could not be parsed, skip this item.
       if ($parsed === NULL) {
         continue;
       }
 
+      // Prepare the iframe attributes, ensuring a title is set for
+      // accessibility.
       $attributes = $parsed->attributes;
       if (!isset($attributes['title'])) {
         $attributes['title'] = (string) $this->t(
@@ -109,6 +114,8 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
         );
       }
 
+      // If the host is trusted, render the iframe directly with a special
+      // class.
       if ($this->iframeParser->isTrustedHost($parsed->host, $trusted_hosts)) {
         $attributes['class'] = ['rouen-iframe-consent__trusted'];
 
@@ -128,13 +135,30 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
         continue;
       }
 
-      $thumbnail_url = $this->thumbnailManager->ensureThumbnail(
+      // Generate the thumbnail URL, falling back to the configured image if
+      // necessary.
+      $thumbnail_url = $this->thumbnailManager->getThumbnail(
         $entity,
         $items->getName(),
         (int) $delta,
         $parsed,
       );
 
+      // Repair missing or stale records for published content only. The
+      // manager independently enforces the same revision guard.
+      if ($thumbnail_url === NULL
+        && (!$entity->getEntityType()->isRevisionable()
+          || $entity->isDefaultRevision())
+      ) {
+        $thumbnail_url = $this->thumbnailManager->ensureThumbnail(
+          $entity,
+          $items->getName(),
+          (int) $delta,
+          $parsed,
+        );
+      }
+
+      // If no thumbnail could be generated, use the fallback image.
       if ($thumbnail_url === NULL) {
         $thumbnail_url = $this->getFallbackImageUrl(
           (int) $settings->get('fallback_image_fid')
@@ -143,6 +167,8 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
 
       $attributes['height'] = '100%';
 
+      // Render the consent placeholder with the necessary data attributes and
+      // localized strings.
       $elements[$delta] = [
         '#theme' => 'rouen_iframe_consent_placeholder',
         '#iframe_attributes' => base64_encode(
@@ -176,8 +202,16 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
 
   /**
    * Returns the configured fallback image or the module default.
+   *
+   * @param int $fileId
+   *   The file ID of the configured fallback image.
+   *
+   * @return string
+   *   The URL of the fallback image.
    */
   private function getFallbackImageUrl(int $fileId): string {
+    // If a valid file ID is provided, attempt to load the file and generate its
+    // URL.
     if ($fileId > 0) {
       $file = $this->entityTypeManager->getStorage('file')->load($fileId);
 
@@ -185,6 +219,8 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
         return $this->fileUrlGenerator->generateString($file->getFileUri());
       }
     }
+
+    // If no valid file is found, use the module's default fallback image.
     $path = $this
       ->moduleExtensionList
       ->getPath('rouen_iframe_consent') . '/images/fallback.svg';

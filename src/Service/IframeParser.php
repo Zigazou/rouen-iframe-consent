@@ -118,14 +118,14 @@ final class IframeParser {
   /**
    * Provider-specific thumbnail lookup URL handlers.
    *
-   * @var ThumbnailLookupUrlHandler[]
+   * @var \App\Service\ThumbnailLookupUrlHandler[]
    */
   private readonly array $thumbnailLookupUrlHandlers;
 
   /**
    * Creates an iframe parser.
    *
-   * @param iterable<ThumbnailLookupUrlHandler> $thumbnailLookupUrlHandlers
+   * @param iterable<\App\Service\ThumbnailLookupUrlHandler> $thumbnailLookupUrlHandlers
    *   Provider-specific thumbnail lookup URL handlers.
    */
   public function __construct(iterable $thumbnailLookupUrlHandlers) {
@@ -335,7 +335,9 @@ final class IframeParser {
   private function width(string $value, int $default): int|string {
     if (preg_match(self::WIDTH_IN_PERCENT_PATTERN, $value, $matches)) {
       $percentage = (float) rtrim($matches[1], '%');
-      if ($percentage >= 1 && $percentage <= 10000) {
+
+      // Return the percentage string if it's within the valid range.
+      if ($percentage >= 1 && $percentage <= 100) {
         return $matches[1];
       }
     }

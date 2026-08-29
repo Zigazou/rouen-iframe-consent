@@ -31,6 +31,11 @@ function rouen_iframe_consent_schema(): array {
         'length' => 128,
         'not null' => TRUE,
       ],
+      'langcode' => [
+        'type' => 'varchar_ascii',
+        'length' => 32,
+        'not null' => TRUE,
+      ],
       'field_name' => [
         'type' => 'varchar_ascii',
         'length' => 128,
@@ -76,11 +81,12 @@ function rouen_iframe_consent_schema(): array {
     ],
     'primary key' => ['id'],
     'unique keys' => [
-      'entity_field_delta' => [
+      'entity_field_delta_langcode' => [
         'entity_type',
         'entity_uuid',
+        'langcode',
         'field_name',
-        'delta'
+        'delta',
       ],
     ],
     'indexes' => [

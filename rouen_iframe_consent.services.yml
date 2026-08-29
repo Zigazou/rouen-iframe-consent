@@ -3,6 +3,30 @@ services:
     parent: logger.channel_base
     arguments: ['rouen_iframe_consent']
 
+  Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\DailymotionThumbnailLookupUrlHandler:
+    tags:
+      - { name: rouen_iframe_consent.thumbnail_lookup_url_handler }
+
+  Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\FacebookThumbnailLookupUrlHandler:
+    tags:
+      - { name: rouen_iframe_consent.thumbnail_lookup_url_handler }
+
+  Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\InstagramThumbnailLookupUrlHandler:
+    tags:
+      - { name: rouen_iframe_consent.thumbnail_lookup_url_handler }
+
+  Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\VimeoThumbnailLookupUrlHandler:
+    tags:
+      - { name: rouen_iframe_consent.thumbnail_lookup_url_handler }
+
+  Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\XThumbnailLookupUrlHandler:
+    tags:
+      - { name: rouen_iframe_consent.thumbnail_lookup_url_handler }
+
+  Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\YouTubeThumbnailLookupUrlHandler:
+    tags:
+      - { name: rouen_iframe_consent.thumbnail_lookup_url_handler }
+
   rouen_iframe_consent.iframe_parser:
     class: Drupal\rouen_iframe_consent\Service\IframeParser
     arguments:
@@ -10,6 +34,12 @@ services:
 
   Drupal\rouen_iframe_consent\Service\IframeParser:
     alias: 'rouen_iframe_consent.iframe_parser'
+
+  rouen_iframe_consent.remote_url_validator:
+    class: Drupal\rouen_iframe_consent\Service\RemoteUrlValidator
+
+  Drupal\rouen_iframe_consent\Service\RemoteUrlValidator:
+    alias: 'rouen_iframe_consent.remote_url_validator'
 
   rouen_iframe_consent.thumbnail_manager:
     class: Drupal\rouen_iframe_consent\Service\ThumbnailManager
@@ -27,6 +57,7 @@ services:
       - '@media.oembed.resource_fetcher'
       - '@http_client'
       - '@config.factory'
+      - '@rouen_iframe_consent.remote_url_validator'
 
   Drupal\rouen_iframe_consent\Service\ThumbnailManager:
     alias: 'rouen_iframe_consent.thumbnail_manager'

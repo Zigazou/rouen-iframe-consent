@@ -8,6 +8,24 @@
   'use strict';
 
   /**
+   * Set of allowed iframe attributes to ensure security and prevent XSS
+   * attacks.
+   *
+   * @type {Set<string>}
+   */
+  const allowedAttributes = new Set([
+    'src',
+    'width',
+    'height',
+    'loading',
+    'title',
+    'allow',
+    'allowfullscreen',
+    'referrerpolicy',
+    'sandbox',
+  ]);
+
+  /**
    * Drupal behavior for handling Rouen iframe consent interactions.
    *
    * @type {Drupal~behavior}
@@ -34,14 +52,22 @@
             try {
               // Decode base64-encoded JSON attributes stored in
               // data-iframe-attributes.
+              const bytes = Uint8Array.from(
+                window.atob(button.dataset.iframeAttributes),
+                (character) => character.charCodeAt(0)
+              );
               const attributes = JSON.parse(
-                window.atob(button.dataset.iframeAttributes)
+                new TextDecoder('utf-8', { fatal: true }).decode(bytes)
               );
 
               // Apply each attribute to the created iframe element.
               const iframe = document.createElement('iframe');
 
               Object.entries(attributes).forEach(([name, value]) => {
+                if (!allowedAttributes.has(name)) {
+                  return;
+                }
+
                 if (value === true) {
                   iframe.setAttribute(name, '');
                 }

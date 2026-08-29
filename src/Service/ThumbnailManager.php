@@ -16,11 +16,15 @@ use Drupal\Core\File\FileExists;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
+use Drupal\Core\Queue\DelayedRequeueException;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\media\OEmbed\ResourceFetcherInterface;
 use Drupal\media\OEmbed\UrlResolverInterface;
 use Drupal\rouen_iframe_consent\ValueObject\ParsedIframe;
 use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Psr7\Uri;
+use GuzzleHttp\Psr7\UriResolver;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * Tracks, downloads, and removes iframe preview thumbnails.
@@ -49,6 +53,27 @@ final class ThumbnailManager {
   private const MAX_DOWNLOAD_BYTES = 5_242_880;
 
   /**
+   * Maximum number of attempts for a transient thumbnail failure.
+   *
+   * @var int
+   */
+  private const MAX_ATTEMPTS = 3;
+
+  /**
+   * Maximum number of redirects followed for a thumbnail request.
+   *
+   * @var int
+   */
+  private const MAX_REDIRECTS = 5;
+
+  /**
+   * Formatter usage, cached by entity type and bundle for this request.
+   *
+   * @var array<string, array<string, bool>>
+   */
+  private array $formatterFields = [];
+
+  /**
    * Creates the thumbnail manager.
    */
   public function __construct(
@@ -65,7 +90,53 @@ final class ThumbnailManager {
     private readonly ResourceFetcherInterface $resourceFetcher,
     private readonly ClientInterface $httpClient,
     private readonly ConfigFactoryInterface $configFactory,
+    private readonly RemoteUrlValidator $remoteUrlValidator,
   ) {}
+
+  /**
+   * Returns an existing thumbnail without changing persistent state.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity containing the iframe field.
+   * @param string $fieldName
+   *   The name of the field containing the iframe.
+   * @param int $delta
+   *   The delta of the field item.
+   * @param \Drupal\rouen_iframe_consent\ValueObject\ParsedIframe $iframe
+   *   The parsed iframe data.
+   *
+   * @return string|null
+   *   The public URL of the thumbnail if ready, or NULL if pending, failed,
+   *   or not found.
+   */
+  public function getThumbnail(
+    EntityInterface $entity,
+    string $fieldName,
+    int $delta,
+    ParsedIframe $iframe,
+  ): ?string {
+    // Only process fieldable entities that are saved and have a UUID.
+    if (
+      !$entity instanceof FieldableEntityInterface
+      || $entity->isNew()
+      || $entity->uuid() === NULL
+    ) {
+      return NULL;
+    }
+
+    $keys = $this->recordKeys($entity, $fieldName, $delta);
+    $record = $this->loadRecord($keys);
+
+    if ($record === FALSE
+      || !hash_equals($record->source_hash, $iframe->getSourceHash())
+      || $record->status !== 'ready'
+    ) {
+      return NULL;
+    }
+
+    // Return the public URL of the thumbnail if it exists.
+    return $this->thumbnailUrl($record->thumbnail_uri ?? NULL);
+  }
 
   /**
    * Creates or updates a thumbnail record and returns its public URL if ready.
@@ -88,30 +159,19 @@ final class ThumbnailManager {
     int $delta,
     ParsedIframe $iframe,
   ): ?string {
+    // Only process fieldable entities that are saved and have a UUID.
     if (
       !$entity instanceof FieldableEntityInterface
       || $entity->isNew()
       || $entity->uuid() === NULL
+      || ($entity->getEntityType()->isRevisionable()
+        && !$entity->isDefaultRevision())
     ) {
       return NULL;
     }
 
-    $keys = [
-      'entity_type' => $entity->getEntityTypeId(),
-      'entity_uuid' => $entity->uuid(),
-      'field_name' => $fieldName,
-      'delta' => $delta,
-    ];
-
-    $record = $this->database
-      ->select(self::TABLE, 't')
-      ->fields('t')
-      ->condition('entity_type', $keys['entity_type'])
-      ->condition('entity_uuid', $keys['entity_uuid'])
-      ->condition('field_name', $fieldName)
-      ->condition('delta', $delta)
-      ->execute()
-      ->fetchObject();
+    $keys = $this->recordKeys($entity, $fieldName, $delta);
+    $record = $this->loadRecord($keys);
 
     if (
       $record !== FALSE
@@ -119,13 +179,28 @@ final class ThumbnailManager {
     ) {
       $url = $this->thumbnailUrl($record->thumbnail_uri ?? NULL);
 
-      if ($url !== NULL || $record->status !== 'ready') {
+      if ($url !== NULL || $record->status === 'pending') {
         return $url;
       }
 
+      // Records created by older versions failed after one attempt. Resume
+      // those records, but leave records that exhausted the current retry
+      // policy permanently failed.
+      if ($record->status === 'failed'
+        && (int) $record->attempts >= self::MAX_ATTEMPTS
+      ) {
+        return NULL;
+      }
+
+      $attempts = $record->status === 'ready' ? 0 : (int) $record->attempts;
+
       $this->database
         ->update(self::TABLE)
-        ->fields(['status' => 'pending', 'attempts' => 0, 'changed' => time()])
+        ->fields([
+          'status' => 'pending',
+          'attempts' => $attempts,
+          'changed' => time(),
+        ])
         ->condition('id', $record->id)
         ->execute();
 
@@ -137,6 +212,7 @@ final class ThumbnailManager {
     }
 
     if ($record !== FALSE) {
+      // Delete the old thumbnail file if it exists.
       $this->deleteFile($record->thumbnail_uri ?? NULL);
 
       $this->database
@@ -156,6 +232,7 @@ final class ThumbnailManager {
       $record_id = (int) $record->id;
     }
     else {
+      // Create a new record for this thumbnail.
       try {
         $record_id = (int) $this->database
           ->insert(self::TABLE)
@@ -192,19 +269,59 @@ final class ThumbnailManager {
    *   If a database constraint is violated during record creation.
    */
   public function syncEntity(EntityInterface $entity): void {
+    // Only process fieldable entities that are saved and have a UUID.
     if (
       !$entity instanceof FieldableEntityInterface
       || $entity->isNew()
       || $entity->uuid() === NULL
+      || ($entity->getEntityType()->isRevisionable()
+        && !$entity->isDefaultRevision())
     ) {
       return;
     }
+
+    // Synchronize every translation of the entity.
+    $langcodes = array_keys($entity->getTranslationLanguages());
+    foreach ($langcodes as $langcode) {
+      if ($entity->hasTranslation($langcode)) {
+        $translation = $entity->getTranslation($langcode);
+        if ($translation instanceof FieldableEntityInterface) {
+          $this->syncTranslation($translation);
+        }
+      }
+    }
+
+    if ($langcodes === []) {
+      return;
+    }
+
+    // Delete any records for translations that no longer exist.
+    $records = $this->database
+      ->select(self::TABLE, 't')
+      ->fields('t')
+      ->condition('entity_type', $entity->getEntityTypeId())
+      ->condition('entity_uuid', $entity->uuid())
+      ->condition('langcode', $langcodes, 'NOT IN')
+      ->execute()
+      ->fetchAll();
+
+    foreach ($records as $record) {
+      $this->deleteRecord($record);
+    }
+  }
+
+  /**
+   * Synchronizes one translation of a saved entity.
+   */
+  private function syncTranslation(FieldableEntityInterface $entity): void {
+    $langcode = $entity->language()->getId();
 
     $existing = $this->database
       ->select(self::TABLE, 't')
       ->fields('t')
       ->condition('entity_type', $entity->getEntityTypeId())
       ->condition('entity_uuid', $entity->uuid())
+      ->condition('langcode', $langcode)
       ->execute()
       ->fetchAllAssoc('id');
 
@@ -319,19 +436,7 @@ final class ThumbnailManager {
       }
 
       $thumbnail_url_string = $thumbnail_url->toString();
-
-      if (!$this->isSafeRemoteImageUrl($thumbnail_url_string)) {
-        throw new \RuntimeException(
-          'The oEmbed thumbnail URL is not safe to retrieve.'
-        );
-      }
-
-      $response = $this->httpClient->request('GET', $thumbnail_url_string, [
-        'allow_redirects' => ['max' => 5],
-        'connect_timeout' => 5,
-        'timeout' => 15,
-        'headers' => ['Accept' => 'image/jpeg,image/png,image/gif,image/webp'],
-      ]);
+      $response = $this->requestRemoteImage($thumbnail_url_string);
 
       $content_length = (int) $response->getHeaderLine('Content-Length');
 
@@ -434,6 +539,15 @@ final class ThumbnailManager {
         ]
       );
 
+      if ($attempts < self::MAX_ATTEMPTS) {
+        throw new DelayedRequeueException(
+          $attempts === 1 ? 60 : 900,
+          'The thumbnail download will be retried.',
+          0,
+          $exception,
+        );
+      }
+
       $this->markFailed($recordId, $record->source_hash);
     }
   }
@@ -455,20 +569,102 @@ final class ThumbnailManager {
   ): bool {
     $entityTypeId = $entity->getEntityTypeId();
     $bundle = $entity->bundle();
+    $cache_key = $entityTypeId . ':' . $bundle;
+
+    if (isset($this->formatterFields[$cache_key])) {
+      return isset($this->formatterFields[$cache_key][$fieldName]);
+    }
+
+    $this->formatterFields[$cache_key] = [];
     $viewModes = $this->entityDisplayRepository
       ->getViewModeOptionsByBundle($entityTypeId, $bundle);
 
     foreach (array_keys($viewModes) as $viewMode) {
       $display = $this->entityDisplayRepository
         ->getViewDisplay($entityTypeId, $bundle, $viewMode);
-      $component = $display->getComponent($fieldName);
-
-      if (($component['type'] ?? NULL) === 'rouen_iframe_consent') {
-        return TRUE;
+      foreach ($display->getComponents() as $name => $component) {
+        if (($component['type'] ?? NULL) === 'rouen_iframe_consent') {
+          $this->formatterFields[$cache_key][$name] = TRUE;
+        }
       }
     }
 
-    return FALSE;
+    return isset($this->formatterFields[$cache_key][$fieldName]);
+  }
+
+  /**
+   * Builds the language-aware logical key for a thumbnail record.
+   *
+   * @return array<string, int|string>
+   *   The database key fields.
+   */
+  private function recordKeys(
+    EntityInterface $entity,
+    string $fieldName,
+    int $delta,
+  ): array {
+    return [
+      'entity_type' => $entity->getEntityTypeId(),
+      'entity_uuid' => (string) $entity->uuid(),
+      'langcode' => $entity->language()->getId(),
+      'field_name' => $fieldName,
+      'delta' => $delta,
+    ];
+  }
+
+  /**
+   * Loads a thumbnail record by its logical key.
+   */
+  private function loadRecord(array $keys): object|false {
+    $query = $this->database->select(self::TABLE, 't')->fields('t');
+    foreach ($keys as $name => $value) {
+      $query->condition($name, $value);
+    }
+
+    return $query->execute()->fetchObject();
+  }
+
+  /**
+   * Retrieves an image while validating every redirect destination.
+   */
+  private function requestRemoteImage(string $url): ResponseInterface {
+    for ($redirects = 0; $redirects <= self::MAX_REDIRECTS; $redirects++) {
+      if (!$this->remoteUrlValidator->isSafe($url)) {
+        throw new \RuntimeException(
+          'The oEmbed thumbnail URL is not safe to retrieve.'
+        );
+      }
+
+      $response = $this->httpClient->request('GET', $url, [
+        'allow_redirects' => FALSE,
+        'connect_timeout' => 5,
+        'timeout' => 15,
+        'headers' => ['Accept' => 'image/jpeg,image/png,image/gif,image/webp'],
+      ]);
+      $status = $response->getStatusCode();
+
+      if ($status >= 200 && $status < 300) {
+        return $response;
+      }
+
+      if ($status < 300 || $status >= 400) {
+        throw new \RuntimeException(sprintf(
+          'The oEmbed thumbnail returned HTTP status %d.',
+          $status,
+        ));
+      }
+
+      $location = $response->getHeaderLine('Location');
+      if ($location === '') {
+        throw new \RuntimeException(
+          'The oEmbed thumbnail redirect has no destination.'
+        );
+      }
+
+      $url = (string) UriResolver::resolve(new Uri($url), new Uri($location));
+    }
+
+    throw new \RuntimeException('The oEmbed thumbnail redirected too often.');
   }
 
   /**
@@ -554,49 +750,6 @@ final class ThumbnailManager {
         [$record->entity_type . ':' . $record->entity_id]
       );
     }
-  }
-
-  /**
-   * Rejects malformed URLs and literal local or private network addresses.
-   *
-   * @param string $url
-   *   The URL to validate.
-   *
-   * @return bool
-   *   TRUE if the URL is safe to retrieve, FALSE otherwise.
-   */
-  private function isSafeRemoteImageUrl(string $url): bool {
-    if (filter_var($url, FILTER_VALIDATE_URL) === FALSE) {
-      return FALSE;
-    }
-
-    $parts = parse_url($url);
-    if (!is_array($parts)
-      || !in_array(
-        strtolower((string) ($parts['scheme'] ?? '')),
-        ['http', 'https'], TRUE
-      )
-      || empty($parts['host'])
-      || !empty($parts['user'])
-      || !empty($parts['pass'])) {
-      return FALSE;
-    }
-
-    $host = strtolower(rtrim((string) $parts['host'], '.'));
-
-    if ($host === 'localhost' || str_ends_with($host, '.localhost')) {
-      return FALSE;
-    }
-
-    if (filter_var($host, FILTER_VALIDATE_IP) !== FALSE) {
-      return filter_var(
-        $host,
-        FILTER_VALIDATE_IP,
-        FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-      ) !== FALSE;
-    }
-
-    return TRUE;
   }
 
 }
