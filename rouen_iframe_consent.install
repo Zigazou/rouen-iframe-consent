@@ -56,6 +56,11 @@ function rouen_iframe_consent_schema(): array {
         'size' => 'big',
         'not null' => TRUE,
       ],
+      'source_url' => [
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+      ],
       'thumbnail_uri' => [
         'type' => 'text',
         'size' => 'normal',
@@ -90,33 +95,6 @@ function rouen_iframe_consent_schema(): array {
   ];
 
   return $schema;
-}
-
-/**
- * Adds configurable consent display and thumbnail retrieval defaults.
- */
-function rouen_iframe_consent_update_10001(): void {
-  $defaults = [
-    'consent_message' => 'This content is hosted by @provider. Loading it may ' .
-    'allow this service to store cookies on your device.',
-    'consent_button_label' => 'I accept',
-    'default_width' => 560,
-    'default_height' => 315,
-    'remote_thumbnail_max_size' => 5_242_880,
-    'thumbnail_connect_timeout' => 5,
-    'thumbnail_timeout' => 15,
-    'thumbnail_max_redirects' => 5,
-  ];
-  $config = \Drupal::configFactory()
-    ->getEditable('rouen_iframe_consent.settings');
-
-  foreach ($defaults as $key => $value) {
-    if ($config->get($key) === NULL) {
-      $config->set($key, $value);
-    }
-  }
-
-  $config->save();
 }
 
 /**

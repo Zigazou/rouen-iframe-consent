@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler;
 
 /**
- * Extracts the public video URL from Facebook video plugin URLs.
+ * Extracts public content URLs from Facebook plugin URLs.
  */
 final class FacebookThumbnailLookupUrlHandler extends ThumbnailLookupUrlHandler {
 
@@ -16,7 +16,7 @@ final class FacebookThumbnailLookupUrlHandler extends ThumbnailLookupUrlHandler 
     $path = (string) parse_url($source, PHP_URL_PATH);
     if (
       $this->hostMatches($host, 'facebook.com', 'fbcdn.net')
-      && preg_match('#/plugins/video\.php#', $path)
+      && preg_match('#/plugins/(?:video|post)\.php#', $path)
     ) {
       return $this->getQueryParameter($source, 'href');
     }

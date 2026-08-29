@@ -208,6 +208,11 @@ final class IframeParserTest extends UnitTestCase {
         'https%3A%2F%2Fwww.facebook.com%2Fexample%2Fvideos%2F123',
         'https://www.facebook.com/example/videos/123',
       ],
+      'Facebook post' => [
+        'https://www.facebook.com/plugins/post.php?href=' .
+        'https%3A%2F%2Fwww.facebook.com%2Fexample%2Fposts%2F123',
+        'https://www.facebook.com/example/posts/123',
+      ],
       'Instagram' => [
         'https://www.instagram.com/embed/?src=' .
         'https%3A%2F%2Fwww.instagram.com%2Fp%2FABC123%2F',

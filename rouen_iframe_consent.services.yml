@@ -42,6 +42,8 @@ services:
   Drupal\rouen_iframe_consent\Service\RemoteUrlValidator:
     alias: 'rouen_iframe_consent.remote_url_validator'
 
+  Drupal\rouen_iframe_consent\Service\PreviewUrlExtractor: ~
+
   rouen_iframe_consent.thumbnail_manager:
     class: Drupal\rouen_iframe_consent\Service\ThumbnailManager
     arguments:
@@ -59,6 +61,7 @@ services:
       - '@http_client'
       - '@config.factory'
       - '@rouen_iframe_consent.remote_url_validator'
+      - '@Drupal\rouen_iframe_consent\Service\PreviewUrlExtractor'
 
   Drupal\rouen_iframe_consent\Service\ThumbnailManager:
     alias: 'rouen_iframe_consent.thumbnail_manager'

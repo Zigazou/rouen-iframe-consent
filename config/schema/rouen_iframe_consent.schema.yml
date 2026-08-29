@@ -15,7 +15,7 @@ rouen_iframe_consent.settings:
       type: text
       label: 'Consent message'
     consent_button_label:
-      type: label
+      type: string
       label: 'Consent button label'
     default_width:
       type: integer

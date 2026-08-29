@@ -49,6 +49,13 @@ thumbnails to
 timeouts, and redirect limits are configurable. Unsupported providers use the
 globally configured image or the bundled fallback.
 
+Facebook oEmbed responses do not always contain a thumbnail URL. In that case,
+the module first looks for preview images in the oEmbed markup, then retrieves
+the iframe document server-side and checks its image metadata and video poster.
+Profile pictures and other icon-sized candidates are skipped in favor of the
+first content image. The same download limits and remote URL validation apply
+to every fallback.
+
 Thumbnail records and files are removed when the iframe field item disappears,
 the iframe URL changes, the formatter no longer applies on the next entity save,
 or the owning entity is deleted. Queue items referring to deleted records are
