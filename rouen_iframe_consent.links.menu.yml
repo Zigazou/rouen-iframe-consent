@@ -1,0 +1,5 @@
+rouen_iframe_consent.settings:
+  title: 'Rouen Iframe Consent'
+  description: 'Configure iframe consent placeholders and trusted sites.'
+  route_name: rouen_iframe_consent.settings
+  parent: system.admin_config_media

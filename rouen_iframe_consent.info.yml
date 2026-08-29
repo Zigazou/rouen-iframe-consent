@@ -1,0 +1,11 @@
+name: Rouen Iframe Consent
+type: module
+description: 'Displays privacy-preserving consent placeholders before loading third-party iframes.'
+package: Custom
+core_version_requirement: ^11 || ^12
+configure: rouen_iframe_consent.settings
+dependencies:
+  - drupal:file
+  - drupal:field
+  - drupal:media
+

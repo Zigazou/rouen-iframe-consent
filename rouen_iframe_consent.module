@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * @file
+ * Hooks for the Rouen Iframe Consent module.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+
+/**
+ * Implements hook_theme().
+ */
+function rouen_iframe_consent_theme(): array {
+  return [
+    'rouen_iframe_consent_placeholder' => [
+      'variables' => [
+        'attributes' => '',
+        'width' => 560,
+        'height' => 315,
+        'provider' => '',
+        'thumbnail_url' => '',
+        'message' => '',
+        'button_label' => '',
+      ],
+      'template' => 'rouen-iframe-consent-placeholder',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function rouen_iframe_consent_entity_insert(EntityInterface $entity): void {
+  if (!$entity->getEntityType()->isRevisionable() || $entity->isDefaultRevision()) {
+    \Drupal::service('rouen_iframe_consent.thumbnail_manager')->syncEntity($entity);
+  }
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function rouen_iframe_consent_entity_update(EntityInterface $entity): void {
+  if (!$entity->getEntityType()->isRevisionable() || $entity->isDefaultRevision()) {
+    \Drupal::service('rouen_iframe_consent.thumbnail_manager')->syncEntity($entity);
+  }
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function rouen_iframe_consent_entity_delete(EntityInterface $entity): void {
+  \Drupal::service('rouen_iframe_consent.thumbnail_manager')->deleteForEntity($entity);
+}

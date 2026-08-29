@@ -1,0 +1,110 @@
+<?php
+
+/**
+ * @file
+ * Install and update hooks for Rouen Iframe Consent.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function rouen_iframe_consent_schema(): array {
+  $schema['rouen_iframe_consent_thumbnail'] = [
+    'description' => 'Tracks remote thumbnails for consent-protected iframes.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'not null' => TRUE,
+      ],
+      'entity_type' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+      ],
+      'entity_id' => [
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+      ],
+      'entity_uuid' => [
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+      ],
+      'field_name' => [
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+      ],
+      'delta' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'source_hash' => [
+        'type' => 'varchar_ascii',
+        'length' => 64,
+        'not null' => TRUE,
+      ],
+      'iframe_url' => [
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+      ],
+      'thumbnail_uri' => [
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+      ],
+      'status' => [
+        'type' => 'varchar_ascii',
+        'length' => 16,
+        'not null' => TRUE,
+        'default' => 'pending',
+      ],
+      'attempts' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'changed' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'entity_field_delta' => ['entity_type', 'entity_uuid', 'field_name', 'delta'],
+    ],
+    'indexes' => [
+      'entity' => ['entity_type', 'entity_uuid'],
+      'status' => ['status'],
+    ],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function rouen_iframe_consent_uninstall(): void {
+  \Drupal::service('queue')->get('rouen_iframe_consent_thumbnail')->deleteQueue();
+
+  $fallback_fid = (int) \Drupal::config('rouen_iframe_consent.settings')->get('fallback_image_fid');
+  if ($fallback_fid > 0 && ($file = \Drupal::entityTypeManager()->getStorage('file')->load($fallback_fid))) {
+    \Drupal::service('file.usage')->delete($file, 'rouen_iframe_consent', 'fallback', 'global');
+    if (\Drupal::service('file.usage')->listUsage($file) === []) {
+      $file->delete();
+    }
+  }
+
+  $directory = 'public://rouen_iframe_consent/thumbnails';
+  if (\Drupal::service('file_system')->prepareDirectory($directory)) {
+    foreach (\Drupal::service('file_system')->scanDirectory($directory, '/.*/') as $file) {
+      \Drupal::service('file_system')->delete($file->uri);
+    }
+  }
+}

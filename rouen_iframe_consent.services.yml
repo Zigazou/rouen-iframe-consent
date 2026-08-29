@@ -1,0 +1,24 @@
+services:
+  logger.channel.rouen_iframe_consent:
+    parent: logger.channel_base
+    arguments: ['rouen_iframe_consent']
+
+  rouen_iframe_consent.iframe_parser:
+    class: Drupal\rouen_iframe_consent\Service\IframeParser
+
+  rouen_iframe_consent.thumbnail_manager:
+    class: Drupal\rouen_iframe_consent\Service\ThumbnailManager
+    arguments:
+      - '@database'
+      - '@queue'
+      - '@file_system'
+      - '@file_url_generator'
+      - '@entity_type.manager'
+      - '@entity_display.repository'
+      - '@rouen_iframe_consent.iframe_parser'
+      - '@cache_tags.invalidator'
+      - '@logger.channel.rouen_iframe_consent'
+      - '@media.oembed.url_resolver'
+      - '@media.oembed.resource_fetcher'
+      - '@http_client'
+      - '@config.factory'

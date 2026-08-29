@@ -1,0 +1,54 @@
+.rouen-iframe-consent {
+  align-items: center;
+  aspect-ratio: var(--ric-ratio);
+  background-color: #222;
+  box-sizing: border-box;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+  overflow: hidden;
+  position: relative;
+  width: min(100%, var(--ric-width));
+}
+
+.rouen-iframe-consent__thumbnail {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  position: absolute;
+  width: 100%;
+}
+
+.rouen-iframe-consent__overlay {
+  background: rgb(0 0 0 / 72%);
+  box-sizing: border-box;
+  max-width: 34rem;
+  padding: 1.25rem;
+  position: relative;
+  text-align: center;
+}
+
+.rouen-iframe-consent__message {
+  margin-block: 0 1rem;
+}
+
+.rouen-iframe-consent__accept {
+  cursor: pointer;
+  font: inherit;
+  padding: .55rem 1rem;
+}
+
+.rouen-iframe-consent > iframe {
+  border: 0;
+  height: 100%;
+  inset: 0;
+  position: absolute;
+  width: 100%;
+}
+
+.rouen-iframe-consent__trusted {
+  border: 0;
+  height: auto;
+  max-width: 100%;
+}

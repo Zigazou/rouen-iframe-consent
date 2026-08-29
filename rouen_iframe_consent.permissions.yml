@@ -1,0 +1,5 @@
+administer rouen iframe consent:
+  title: 'Administer Rouen Iframe Consent'
+  description: 'Configure the iframe consent allowlist and fallback image.'
+  restrict access: true
+

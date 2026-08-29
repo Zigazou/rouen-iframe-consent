@@ -1,0 +1,11 @@
+consent:
+  version: 1.x
+  css:
+    component:
+      css/rouen-iframe-consent.css: {}
+  js:
+    js/rouen-iframe-consent.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+

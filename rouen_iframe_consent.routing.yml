@@ -1,0 +1,8 @@
+rouen_iframe_consent.settings:
+  path: '/admin/config/media/rouen-iframe-consent'
+  defaults:
+    _form: '\Drupal\rouen_iframe_consent\Form\SettingsForm'
+    _title: 'Rouen Iframe Consent'
+  requirements:
+    _permission: 'administer rouen iframe consent'
+
