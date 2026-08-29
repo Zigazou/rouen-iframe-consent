@@ -8,6 +8,9 @@ services:
     arguments:
       - !tagged_iterator rouen_iframe_consent.thumbnail_lookup_url_handler
 
+  Drupal\rouen_iframe_consent\Service\IframeParser:
+    alias: 'rouen_iframe_consent.iframe_parser'
+
   rouen_iframe_consent.thumbnail_manager:
     class: Drupal\rouen_iframe_consent\Service\ThumbnailManager
     arguments:
@@ -24,3 +27,6 @@ services:
       - '@media.oembed.resource_fetcher'
       - '@http_client'
       - '@config.factory'
+
+  Drupal\rouen_iframe_consent\Service\ThumbnailManager:
+    alias: 'rouen_iframe_consent.thumbnail_manager'

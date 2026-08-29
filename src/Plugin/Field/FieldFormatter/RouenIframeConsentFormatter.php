@@ -146,7 +146,7 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
 
       $elements[$delta] = [
         '#theme' => 'rouen_iframe_consent_placeholder',
-        '#attributes' => base64_encode(
+        '#iframe_attributes' => base64_encode(
           (string) json_encode(
             $attributes,
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT

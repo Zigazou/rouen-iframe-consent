@@ -464,11 +464,14 @@ final class ThumbnailManager {
     FieldableEntityInterface $entity,
     string $fieldName,
   ): bool {
-    $displays = $this
-      ->entityDisplayRepository
-      ->getViewDisplays($entity->getEntityTypeId(), $entity->bundle());
+    $entityTypeId = $entity->getEntityTypeId();
+    $bundle = $entity->bundle();
+    $viewModes = $this->entityDisplayRepository
+      ->getViewModeOptionsByBundle($entityTypeId, $bundle);
 
-    foreach ($displays as $display) {
+    foreach (array_keys($viewModes) as $viewMode) {
+      $display = $this->entityDisplayRepository
+        ->getViewDisplay($entityTypeId, $bundle, $viewMode);
       $component = $display->getComponent($fieldName);
 
       if (($component['type'] ?? NULL) === 'rouen_iframe_consent') {

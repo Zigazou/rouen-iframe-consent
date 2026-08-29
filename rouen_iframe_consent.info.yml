@@ -9,3 +9,5 @@ dependencies:
   - drupal:file
   - drupal:field
   - drupal:media
+'interface translation project': rouen_iframe_consent
+'interface translation server pattern': modules/custom/rouen_iframe_consent/translations/%language.po

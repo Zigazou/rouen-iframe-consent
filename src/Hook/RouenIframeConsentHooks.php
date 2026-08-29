@@ -37,7 +37,7 @@ final class RouenIframeConsentHooks {
     return [
       'rouen_iframe_consent_placeholder' => [
         'variables' => [
-          'attributes' => '',
+          'iframe_attributes' => '',
           'width' => 560,
           'height' => 315,
           'provider' => '',
