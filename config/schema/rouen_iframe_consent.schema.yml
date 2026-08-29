@@ -11,4 +11,27 @@ rouen_iframe_consent.settings:
     fallback_image_fid:
       type: integer
       label: 'Fallback image file ID'
-
+    consent_message:
+      type: text
+      label: 'Consent message'
+    consent_button_label:
+      type: label
+      label: 'Consent button label'
+    default_width:
+      type: integer
+      label: 'Default iframe width'
+    default_height:
+      type: integer
+      label: 'Default iframe height'
+    remote_thumbnail_max_size:
+      type: integer
+      label: 'Maximum remote thumbnail size'
+    thumbnail_connect_timeout:
+      type: integer
+      label: 'Thumbnail connection timeout'
+    thumbnail_timeout:
+      type: integer
+      label: 'Thumbnail request timeout'
+    thumbnail_max_redirects:
+      type: integer
+      label: 'Maximum thumbnail redirects'

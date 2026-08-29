@@ -94,6 +94,11 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
     $entity = $items->getEntity();
     $settings = $this->configFactory->get('rouen_iframe_consent.settings');
     $trusted_hosts = $settings->get('trusted_hosts') ?: [];
+    $consent_message = (string) ($settings->get('consent_message')
+      ?? 'This content is hosted by @provider. Loading it may allow this ' .
+      'service to store cookies on your device.');
+    $consent_button_label = (string) ($settings->get('consent_button_label')
+      ?? 'I accept');
 
     // Iterate over each field item and generate the appropriate render array.
     foreach ($items as $delta => $item) {
@@ -183,11 +188,12 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
         '#height' => $parsed->height,
         '#provider' => $parsed->providerName,
         '#thumbnail_url' => $thumbnail_url,
-        '#message' => $this->t(
-          'This content is hosted by @provider. Loading it may allow this service to store cookies on your device.',
-          ['@provider' => $parsed->providerName]
+        '#message' => str_replace(
+          '@provider',
+          $parsed->providerName,
+          $consent_message,
         ),
-        '#button_label' => $this->t('I accept'),
+        '#button_label' => $consent_button_label,
         '#attached' => [
           'library' => ['rouen_iframe_consent/consent'],
         ],

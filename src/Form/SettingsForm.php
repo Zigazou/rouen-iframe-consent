@@ -114,6 +114,106 @@ final class SettingsForm extends ConfigFormBase {
       ],
     ];
 
+    $form['consent_message'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Consent message'),
+      '#description' => $this->t(
+        'Use @provider where the external service name should appear.'
+      ),
+      '#default_value' => $config->get('consent_message')
+        ?? 'This content is hosted by @provider. Loading it may allow this ' .
+        'service to store cookies on your device.',
+      '#required' => TRUE,
+      '#rows' => 3,
+    ];
+
+    $form['consent_button_label'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Consent button label'),
+      '#default_value' => $config->get('consent_button_label') ?? 'I accept',
+      '#required' => TRUE,
+      '#maxlength' => 255,
+    ];
+
+    $form['default_width'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Default iframe width'),
+      '#description' => $this->t(
+        'Width in pixels used when an iframe has no valid width.'
+      ),
+      '#default_value' => $config->get('default_width') ?? 560,
+      '#required' => TRUE,
+      '#min' => 1,
+      '#max' => 10000,
+      '#step' => 1,
+    ];
+
+    $form['default_height'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Default iframe height'),
+      '#description' => $this->t(
+        'Height in pixels used when an iframe has no valid height.'
+      ),
+      '#default_value' => $config->get('default_height') ?? 315,
+      '#required' => TRUE,
+      '#min' => 1,
+      '#max' => 10000,
+      '#step' => 1,
+    ];
+
+    $form['remote_thumbnail_settings'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Remote thumbnail settings'),
+      '#open' => FALSE,
+    ];
+
+    $form['remote_thumbnail_settings']['remote_thumbnail_max_size'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Maximum remote thumbnail size'),
+      '#description' => $this->t('Maximum downloaded file size in bytes.'),
+      '#default_value' => $config->get('remote_thumbnail_max_size')
+        ?? 5_242_880,
+      '#required' => TRUE,
+      '#min' => 1,
+      '#step' => 1,
+    ];
+
+    $form['remote_thumbnail_settings']['thumbnail_connect_timeout'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Thumbnail connection timeout'),
+      '#description' => $this->t(
+        'Maximum time in seconds allowed to establish the connection.'
+      ),
+      '#default_value' => $config->get('thumbnail_connect_timeout') ?? 5,
+      '#required' => TRUE,
+      '#min' => 1,
+      '#step' => 1,
+    ];
+
+    $form['remote_thumbnail_settings']['thumbnail_timeout'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Thumbnail request timeout'),
+      '#description' => $this->t(
+        'Maximum total time in seconds allowed for the request.'
+      ),
+      '#default_value' => $config->get('thumbnail_timeout') ?? 15,
+      '#required' => TRUE,
+      '#min' => 1,
+      '#step' => 1,
+    ];
+
+    $form['remote_thumbnail_settings']['thumbnail_max_redirects'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Maximum thumbnail redirects'),
+      '#description' => $this->t(
+        'Maximum number of HTTP redirects followed for one thumbnail.'
+      ),
+      '#default_value' => $config->get('thumbnail_max_redirects') ?? 5,
+      '#required' => TRUE,
+      '#min' => 0,
+      '#step' => 1,
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -150,6 +250,18 @@ final class SettingsForm extends ConfigFormBase {
     }
 
     $form_state->setValue('trusted_hosts', array_values($normalized));
+
+    foreach (['consent_message', 'consent_button_label'] as $key) {
+      $value = trim((string) $form_state->getValue($key));
+      $form_state->setValue($key, $value);
+
+      if ($value === '') {
+        $form_state->setErrorByName(
+          $key,
+          $this->t('This field is required.')
+        );
+      }
+    }
   }
 
   /**
@@ -205,6 +317,32 @@ final class SettingsForm extends ConfigFormBase {
     $config
       ->set('trusted_hosts', $form_state->getValue('trusted_hosts'))
       ->set('fallback_image_fid', $new_fid)
+      ->set(
+        'consent_message',
+        $form_state->getValue('consent_message')
+      )
+      ->set(
+        'consent_button_label',
+        $form_state->getValue('consent_button_label')
+      )
+      ->set('default_width', (int) $form_state->getValue('default_width'))
+      ->set('default_height', (int) $form_state->getValue('default_height'))
+      ->set(
+        'remote_thumbnail_max_size',
+        (int) $form_state->getValue('remote_thumbnail_max_size')
+      )
+      ->set(
+        'thumbnail_connect_timeout',
+        (int) $form_state->getValue('thumbnail_connect_timeout')
+      )
+      ->set(
+        'thumbnail_timeout',
+        (int) $form_state->getValue('thumbnail_timeout')
+      )
+      ->set(
+        'thumbnail_max_redirects',
+        (int) $form_state->getValue('thumbnail_max_redirects')
+      )
       ->save();
 
     parent::submitForm($form, $form_state);

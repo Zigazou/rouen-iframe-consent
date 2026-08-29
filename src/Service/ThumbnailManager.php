@@ -49,14 +49,28 @@ final class ThumbnailManager {
    *
    * @var int
    */
-  private const MAX_DOWNLOAD_BYTES = 5_242_880;
+  private const DEFAULT_MAX_DOWNLOAD_BYTES = 5_242_880;
 
   /**
    * Maximum number of redirects followed for a thumbnail request.
    *
    * @var int
    */
-  private const MAX_REDIRECTS = 5;
+  private const DEFAULT_MAX_REDIRECTS = 5;
+
+  /**
+   * Default connection timeout for thumbnail requests, in seconds.
+   *
+   * @var int
+   */
+  private const DEFAULT_CONNECT_TIMEOUT = 5;
+
+  /**
+   * Default total timeout for thumbnail requests, in seconds.
+   *
+   * @var int
+   */
+  private const DEFAULT_TIMEOUT = 15;
 
   /**
    * Formatter usage, cached by entity type and bundle for this request.
@@ -406,6 +420,10 @@ final class ThumbnailManager {
       ->execute();
 
     try {
+      $max_download_bytes = $this->positiveIntegerSetting(
+        'remote_thumbnail_max_size',
+        self::DEFAULT_MAX_DOWNLOAD_BYTES,
+      );
       $resource_url = $this->urlResolver->getResourceUrl($record->iframe_url);
       $resource = $this->resourceFetcher->fetchResource($resource_url);
       $thumbnail_url = $resource->getThumbnailUrl();
@@ -420,7 +438,7 @@ final class ThumbnailManager {
 
       $content_length = (int) $response->getHeaderLine('Content-Length');
 
-      if ($content_length > self::MAX_DOWNLOAD_BYTES) {
+      if ($content_length > $max_download_bytes) {
         throw new \RuntimeException(
           'The oEmbed thumbnail exceeds the size limit.'
         );
@@ -444,8 +462,8 @@ final class ThumbnailManager {
         );
       }
 
-      $data = $response->getBody()->read(self::MAX_DOWNLOAD_BYTES + 1);
-      if ($data === '' || strlen($data) > self::MAX_DOWNLOAD_BYTES) {
+      $data = $response->getBody()->read($max_download_bytes + 1);
+      if ($data === '' || strlen($data) > $max_download_bytes) {
         throw new \RuntimeException(
           'The oEmbed thumbnail is empty or exceeds the size limit.'
         );
@@ -599,7 +617,21 @@ final class ThumbnailManager {
    * Retrieves an image while validating every redirect destination.
    */
   private function requestRemoteImage(string $url): ResponseInterface {
-    for ($redirects = 0; $redirects <= self::MAX_REDIRECTS; $redirects++) {
+    $settings = $this->configFactory->get('rouen_iframe_consent.settings');
+    $max_redirects = $settings->get('thumbnail_max_redirects');
+    $max_redirects = is_numeric($max_redirects) && (int) $max_redirects >= 0
+      ? (int) $max_redirects
+      : self::DEFAULT_MAX_REDIRECTS;
+    $connect_timeout = $this->positiveIntegerSetting(
+      'thumbnail_connect_timeout',
+      self::DEFAULT_CONNECT_TIMEOUT,
+    );
+    $timeout = $this->positiveIntegerSetting(
+      'thumbnail_timeout',
+      self::DEFAULT_TIMEOUT,
+    );
+
+    for ($redirects = 0; $redirects <= $max_redirects; $redirects++) {
       if (!$this->remoteUrlValidator->isSafe($url)) {
         throw new \RuntimeException(
           'The oEmbed thumbnail URL is not safe to retrieve.'
@@ -608,8 +640,8 @@ final class ThumbnailManager {
 
       $response = $this->httpClient->request('GET', $url, [
         'allow_redirects' => FALSE,
-        'connect_timeout' => 5,
-        'timeout' => 15,
+        'connect_timeout' => $connect_timeout,
+        'timeout' => $timeout,
         'headers' => ['Accept' => 'image/jpeg,image/png,image/gif,image/webp'],
       ]);
       $status = $response->getStatusCode();
@@ -636,6 +668,19 @@ final class ThumbnailManager {
     }
 
     throw new \RuntimeException('The oEmbed thumbnail redirected too often.');
+  }
+
+  /**
+   * Returns a positive integer setting or its fallback value.
+   */
+  private function positiveIntegerSetting(string $key, int $fallback): int {
+    $value = $this->configFactory
+      ->get('rouen_iframe_consent.settings')
+      ->get($key);
+
+    return is_numeric($value) && (int) $value > 0
+      ? (int) $value
+      : $fallback;
   }
 
   /**

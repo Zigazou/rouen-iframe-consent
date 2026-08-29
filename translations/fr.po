@@ -65,11 +65,11 @@ msgstr "Iframe avec consentement individuel"
 msgid "External content from @provider"
 msgstr "Contenu externe provenant de @provider"
 
-#: src/Plugin/Field/FieldFormatter/RouenIframeConsentFormatter.php:160
+#: config/install/rouen_iframe_consent.settings.yml
 msgid "This content is hosted by @provider. Loading it may allow this service to store cookies on your device."
 msgstr "Ce contenu est hébergé par @provider. Son chargement peut autoriser ce service à enregistrer des cookies sur votre appareil."
 
-#: src/Plugin/Field/FieldFormatter/RouenIframeConsentFormatter.php:163
+#: config/install/rouen_iframe_consent.settings.yml
 msgid "I accept"
 msgstr "J’accepte"
 
@@ -92,3 +92,79 @@ msgstr "Utilisée lorsque le service externe ne fournit pas de miniature oEmbed.
 #: src/Form/SettingsForm.php:144
 msgid "%host is not a valid host name."
 msgstr "%host n’est pas un nom d’hôte valide."
+
+#: config/schema/rouen_iframe_consent.schema.yml
+#: src/Form/SettingsForm.php
+msgid "Consent message"
+msgstr "Message de consentement"
+
+#: src/Form/SettingsForm.php
+msgid "Use @provider where the external service name should appear."
+msgstr "Utilisez @provider à l’emplacement où le nom du service externe doit apparaître."
+
+#: config/schema/rouen_iframe_consent.schema.yml
+#: src/Form/SettingsForm.php
+msgid "Consent button label"
+msgstr "Libellé du bouton de consentement"
+
+#: config/schema/rouen_iframe_consent.schema.yml
+#: src/Form/SettingsForm.php
+msgid "Default iframe width"
+msgstr "Largeur par défaut de l’iframe"
+
+#: src/Form/SettingsForm.php
+msgid "Width in pixels used when an iframe has no valid width."
+msgstr "Largeur en pixels utilisée lorsqu’une iframe n’a pas de largeur valide."
+
+#: config/schema/rouen_iframe_consent.schema.yml
+#: src/Form/SettingsForm.php
+msgid "Default iframe height"
+msgstr "Hauteur par défaut de l’iframe"
+
+#: src/Form/SettingsForm.php
+msgid "Height in pixels used when an iframe has no valid height."
+msgstr "Hauteur en pixels utilisée lorsqu’une iframe n’a pas de hauteur valide."
+
+#: src/Form/SettingsForm.php
+msgid "Remote thumbnail settings"
+msgstr "Paramètres des miniatures distantes"
+
+#: config/schema/rouen_iframe_consent.schema.yml
+#: src/Form/SettingsForm.php
+msgid "Maximum remote thumbnail size"
+msgstr "Taille maximale des miniatures distantes"
+
+#: src/Form/SettingsForm.php
+msgid "Maximum downloaded file size in bytes."
+msgstr "Taille maximale du fichier téléchargé en octets."
+
+#: config/schema/rouen_iframe_consent.schema.yml
+#: src/Form/SettingsForm.php
+msgid "Thumbnail connection timeout"
+msgstr "Délai d’attente de connexion de la miniature"
+
+#: src/Form/SettingsForm.php
+msgid "Maximum time in seconds allowed to establish the connection."
+msgstr "Durée maximale en secondes autorisée pour établir la connexion."
+
+#: config/schema/rouen_iframe_consent.schema.yml
+#: src/Form/SettingsForm.php
+msgid "Thumbnail request timeout"
+msgstr "Délai d’attente de la requête de miniature"
+
+#: src/Form/SettingsForm.php
+msgid "Maximum total time in seconds allowed for the request."
+msgstr "Durée totale maximale en secondes autorisée pour la requête."
+
+#: config/schema/rouen_iframe_consent.schema.yml
+#: src/Form/SettingsForm.php
+msgid "Maximum thumbnail redirects"
+msgstr "Nombre maximal de redirections de miniature"
+
+#: src/Form/SettingsForm.php
+msgid "Maximum number of HTTP redirects followed for one thumbnail."
+msgstr "Nombre maximal de redirections HTTP suivies pour une miniature."
+
+#: src/Form/SettingsForm.php
+msgid "This field is required."
+msgstr "Ce champ est obligatoire."

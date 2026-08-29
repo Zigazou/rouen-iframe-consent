@@ -141,6 +141,29 @@ final class IframeParserTest extends UnitTestCase {
   }
 
   /**
+   * Tests configurable fallback dimensions.
+   */
+  public function testConfiguredDefaultDimensions(): void {
+    $config_factory = $this->getConfigFactoryStub([
+      'rouen_iframe_consent.settings' => [
+        'default_width' => 800,
+        'default_height' => 450,
+      ],
+    ]);
+    $parser = new IframeParser([], $config_factory);
+
+    $iframe = $parser->parse(
+      '<iframe src="https://example.com/embed"></iframe>'
+    );
+
+    self::assertNotNull($iframe);
+    self::assertSame(800, $iframe->width);
+    self::assertSame(450, $iframe->height);
+    self::assertSame('800', $iframe->attributes['width']);
+    self::assertSame('450', $iframe->attributes['height']);
+  }
+
+  /**
    * Tests provider-specific thumbnail lookup URL handling.
    */
   #[DataProvider('thumbnailLookupUrlProvider')]

@@ -25,7 +25,8 @@ The formatter:
    Iframe Consent**.
 2. On the *Manage display* page for a formatted HTML text field, select **Iframe
    with individual consent**.
-3. Configure trusted hosts and the optional generic preview image at
+3. Configure the consent message, button label, default dimensions, trusted
+   hosts, optional generic preview image, and remote thumbnail limits at
    `/admin/config/media/rouen-iframe-consent`.
 4. Run Drupal cron regularly.
 
@@ -37,9 +38,9 @@ never renders invalid iframe source URLs.
 
 When an entity containing a protected iframe is saved, the module queues an
 oEmbed lookup. Cron downloads supported JPEG, PNG, GIF, or WebP thumbnails to
-`public://rouen_iframe_consent/thumbnails`. Downloads are limited to 5 MiB and
-retried up to three times with a delay. Unsupported providers use the globally
-configured image or the bundled fallback.
+`public://rouen_iframe_consent/thumbnails`. Download size, connection and total
+timeouts, and redirect limits are configurable. Unsupported providers use the
+globally configured image or the bundled fallback.
 
 Thumbnail records and files are removed when the iframe field item disappears,
 the iframe URL changes, the formatter no longer applies on the next entity save,

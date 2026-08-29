@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\rouen_iframe_consent\Service;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\ThumbnailLookupUrlHandler;
 use Drupal\rouen_iframe_consent\ValueObject\ParsedIframe;
 
@@ -118,17 +119,22 @@ final class IframeParser {
   /**
    * Provider-specific thumbnail lookup URL handlers.
    *
-   * @var \App\Service\ThumbnailLookupUrlHandler[]
+   * @var ThumbnailLookupUrlHandler[]
    */
   private readonly array $thumbnailLookupUrlHandlers;
 
   /**
    * Creates an iframe parser.
    *
-   * @param iterable<\App\Service\ThumbnailLookupUrlHandler> $thumbnailLookupUrlHandlers
+   * @param iterable<ThumbnailLookupUrlHandler> $thumbnailLookupUrlHandlers
    *   Provider-specific thumbnail lookup URL handlers.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface|null $configFactory
+   *   The config factory, or NULL when the parser is used in isolation.
    */
-  public function __construct(iterable $thumbnailLookupUrlHandlers) {
+  public function __construct(
+    iterable $thumbnailLookupUrlHandlers,
+    private readonly ?ConfigFactoryInterface $configFactory = NULL,
+  ) {
     $handlers = [];
     foreach ($thumbnailLookupUrlHandlers as $handler) {
       if (!$handler instanceof ThumbnailLookupUrlHandler) {
@@ -194,8 +200,14 @@ final class IframeParser {
     }
 
     $host = strtolower((string) parse_url($source, PHP_URL_HOST));
-    $width = $this->width($iframe->getAttribute('width'), 560);
-    $height = $this->dimension($iframe->getAttribute('height'), 315);
+    $width = $this->width(
+      $iframe->getAttribute('width'),
+      $this->defaultDimension('default_width', 560),
+    );
+    $height = $this->dimension(
+      $iframe->getAttribute('height'),
+      $this->defaultDimension('default_height', 315),
+    );
     $attributes = [
       'src' => $source,
       'width' => (string) $width,
@@ -343,6 +355,17 @@ final class IframeParser {
     }
 
     return $this->dimension($value, $default);
+  }
+
+  /**
+   * Returns a configured default dimension within the parser's valid range.
+   */
+  private function defaultDimension(string $key, int $fallback): int {
+    $value = (int) ($this->configFactory
+      ?->get('rouen_iframe_consent.settings')
+      ->get($key) ?? $fallback);
+
+    return $value >= 1 && $value <= 10000 ? $value : $fallback;
   }
 
   /**

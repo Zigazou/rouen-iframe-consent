@@ -3,4 +3,11 @@ trusted_hosts:
 - tile.openstreetmap.org
 - umap.openstreetmap.fr
 fallback_image_fid: 0
-
+consent_message: 'This content is hosted by @provider. Loading it may allow this service to store cookies on your device.'
+consent_button_label: 'I accept'
+default_width: 560
+default_height: 315
+remote_thumbnail_max_size: 5242880
+thumbnail_connect_timeout: 5
+thumbnail_timeout: 15
+thumbnail_max_redirects: 5
