@@ -67,12 +67,6 @@ function rouen_iframe_consent_schema(): array {
         'not null' => TRUE,
         'default' => 'pending',
       ],
-      'attempts' => [
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ],
       'changed' => [
         'type' => 'int',
         'unsigned' => TRUE,

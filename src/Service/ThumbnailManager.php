@@ -16,7 +16,6 @@ use Drupal\Core\File\FileExists;
 use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
-use Drupal\Core\Queue\DelayedRequeueException;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\media\OEmbed\ResourceFetcherInterface;
 use Drupal\media\OEmbed\UrlResolverInterface;
@@ -51,13 +50,6 @@ final class ThumbnailManager {
    * @var int
    */
   private const MAX_DOWNLOAD_BYTES = 5_242_880;
-
-  /**
-   * Maximum number of attempts for a transient thumbnail failure.
-   *
-   * @var int
-   */
-  private const MAX_ATTEMPTS = 3;
 
   /**
    * Maximum number of redirects followed for a thumbnail request.
@@ -183,22 +175,14 @@ final class ThumbnailManager {
         return $url;
       }
 
-      // Records created by older versions failed after one attempt. Resume
-      // those records, but leave records that exhausted the current retry
-      // policy permanently failed.
-      if ($record->status === 'failed'
-        && (int) $record->attempts >= self::MAX_ATTEMPTS
-      ) {
+      if ($record->status === 'failed') {
         return NULL;
       }
-
-      $attempts = $record->status === 'ready' ? 0 : (int) $record->attempts;
 
       $this->database
         ->update(self::TABLE)
         ->fields([
           'status' => 'pending',
-          'attempts' => $attempts,
           'changed' => time(),
         ])
         ->condition('id', $record->id)
@@ -223,7 +207,6 @@ final class ThumbnailManager {
           'iframe_url' => $iframe->thumbnailLookupUrl,
           'thumbnail_uri' => NULL,
           'status' => 'pending',
-          'attempts' => 0,
           'changed' => time(),
         ])
         ->condition('id', $record->id)
@@ -241,7 +224,6 @@ final class ThumbnailManager {
             'source_hash' => $iframe->getSourceHash(),
             'iframe_url' => $iframe->thumbnailLookupUrl,
             'status' => 'pending',
-            'attempts' => 0,
             'changed' => time(),
           ])
           ->execute();
@@ -417,11 +399,9 @@ final class ThumbnailManager {
       return;
     }
 
-    $attempts = (int) $record->attempts + 1;
-
     $this->database
       ->update(self::TABLE)
-      ->fields(['attempts' => $attempts, 'changed' => time()])
+      ->fields(['changed' => time()])
       ->condition('id', $recordId)
       ->execute();
 
@@ -538,15 +518,6 @@ final class ThumbnailManager {
           '@message' => $exception->getMessage(),
         ]
       );
-
-      if ($attempts < self::MAX_ATTEMPTS) {
-        throw new DelayedRequeueException(
-          $attempts === 1 ? 60 : 900,
-          'The thumbnail download will be retried.',
-          0,
-          $exception,
-        );
-      }
 
       $this->markFailed($recordId, $record->source_hash);
     }
