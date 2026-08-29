@@ -69,7 +69,9 @@ final class RouenIframeConsentHooks {
    * Synchronizes thumbnails for the entity's active revision.
    */
   private function syncEntity(EntityInterface $entity): void {
-    if (!$entity->getEntityType()->isRevisionable() || $entity->isDefaultRevision()) {
+    if (!$entity->getEntityType()->isRevisionable() ||
+      $entity->isDefaultRevision()
+    ) {
       $this->thumbnailManager->syncEntity($entity);
     }
   }

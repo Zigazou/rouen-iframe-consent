@@ -36,7 +36,12 @@ final class ThumbnailQueueWorker extends QueueWorkerBase implements ContainerFac
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
+  public static function create(
+    ContainerInterface $container,
+    array $configuration,
+    $plugin_id,
+    $plugin_definition,
+  ): static {
     return new static(
       $configuration,
       $plugin_id,
@@ -55,4 +60,3 @@ final class ThumbnailQueueWorker extends QueueWorkerBase implements ContainerFac
   }
 
 }
-

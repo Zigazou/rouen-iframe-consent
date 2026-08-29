@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\rouen_iframe_consent\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
@@ -33,7 +34,7 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
   public function __construct(
     string $plugin_id,
     mixed $plugin_definition,
-    \Drupal\Core\Field\FieldDefinitionInterface $field_definition,
+    FieldDefinitionInterface $field_definition,
     array $settings,
     string $label,
     string $view_mode,
@@ -45,13 +46,26 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly ModuleExtensionList $moduleExtensionList,
   ) {
-    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings);
+    parent::__construct(
+      $plugin_id,
+      $plugin_definition,
+      $field_definition,
+      $settings,
+      $label,
+      $view_mode,
+      $third_party_settings
+    );
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
+  public static function create(
+    ContainerInterface $container,
+    array $configuration,
+    $plugin_id,
+    $plugin_definition,
+  ): static {
     return new static(
       $plugin_id,
       $plugin_definition,
@@ -72,7 +86,10 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
   /**
    * {@inheritdoc}
    */
-  public function viewElements(FieldItemListInterface $items, $langcode): array {
+  public function viewElements(
+    FieldItemListInterface $items,
+    $langcode,
+  ): array {
     $elements = [];
     $entity = $items->getEntity();
     $settings = $this->configFactory->get('rouen_iframe_consent.settings');
@@ -86,7 +103,10 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
 
       $attributes = $parsed->attributes;
       if (!isset($attributes['title'])) {
-        $attributes['title'] = (string) $this->t('External content from @provider', ['@provider' => $parsed->providerName]);
+        $attributes['title'] = (string) $this->t(
+          'External content from @provider',
+          ['@provider' => $parsed->providerName]
+        );
       }
 
       if ($this->iframeParser->isTrustedHost($parsed->host, $trusted_hosts)) {
@@ -113,7 +133,9 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
         $parsed,
       );
       if ($thumbnail_url === NULL) {
-        $thumbnail_url = $this->getFallbackImageUrl((int) $settings->get('fallback_image_fid'));
+        $thumbnail_url = $this->getFallbackImageUrl(
+          (int) $settings->get('fallback_image_fid')
+        );
       }
 
       $attributes['width'] = '100%';
@@ -121,12 +143,20 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
 
       $elements[$delta] = [
         '#theme' => 'rouen_iframe_consent_placeholder',
-        '#attributes' => base64_encode((string) json_encode($attributes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)),
+        '#attributes' => base64_encode(
+          (string) json_encode(
+            $attributes,
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+          )
+        ),
         '#width' => $parsed->width,
         '#height' => $parsed->height,
         '#provider' => $parsed->providerName,
         '#thumbnail_url' => $thumbnail_url,
-        '#message' => $this->t('This content is hosted by @provider. Loading it may allow this service to store cookies on your device.', ['@provider' => $parsed->providerName]),
+        '#message' => $this->t(
+          'This content is hosted by @provider. Loading it may allow this service to store cookies on your device.',
+          ['@provider' => $parsed->providerName]
+        ),
         '#button_label' => $this->t('I accept'),
         '#attached' => [
           'library' => ['rouen_iframe_consent/consent'],
@@ -146,11 +176,15 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
   private function getFallbackImageUrl(int $fileId): string {
     if ($fileId > 0) {
       $file = $this->entityTypeManager->getStorage('file')->load($fileId);
+
       if ($file !== NULL) {
         return $this->fileUrlGenerator->generateString($file->getFileUri());
       }
     }
-    $path = $this->moduleExtensionList->getPath('rouen_iframe_consent') . '/images/fallback.svg';
+    $path = $this
+      ->moduleExtensionList
+      ->getPath('rouen_iframe_consent') . '/images/fallback.svg';
+
     return $this->fileUrlGenerator->generateString($path);
   }
 
