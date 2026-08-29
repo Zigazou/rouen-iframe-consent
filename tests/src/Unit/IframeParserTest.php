@@ -168,17 +168,17 @@ final class IframeParserTest extends UnitTestCase {
       ],
       'Facebook' => [
         'https://www.facebook.com/plugins/video.php?href=' .
-          'https%3A%2F%2Fwww.facebook.com%2Fexample%2Fvideos%2F123',
+        'https%3A%2F%2Fwww.facebook.com%2Fexample%2Fvideos%2F123',
         'https://www.facebook.com/example/videos/123',
       ],
       'Instagram' => [
         'https://www.instagram.com/embed/?src=' .
-          'https%3A%2F%2Fwww.instagram.com%2Fp%2FABC123%2F',
+        'https%3A%2F%2Fwww.instagram.com%2Fp%2FABC123%2F',
         'https://www.instagram.com/p/ABC123/',
       ],
       'X' => [
         'https://platform.twitter.com/widgets/tweet_button.html?url=' .
-          'https%3A%2F%2Fx.com%2Fexample%2Fstatus%2F123',
+        'https%3A%2F%2Fx.com%2Fexample%2Fstatus%2F123',
         'https://x.com/example/status/123',
       ],
       'Unknown provider' => [

@@ -1,3 +1,6 @@
-trusted_hosts: []
+trusted_hosts:
+- www.openstreetmap.org
+- tile.openstreetmap.org
+- umap.openstreetmap.fr
 fallback_image_fid: 0
 
