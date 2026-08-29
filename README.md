@@ -1,6 +1,6 @@
 # Rouen Iframe Consent
 
-Rouen Iframe Consent is a Drupal 11/12 field formatter that prevents a
+Rouen Iframe Consent is a Drupal 11.2+/12 field formatter that prevents a
 third-party iframe from loading until the visitor explicitly accepts it. It is
 intended for sites whose only consent-requiring storage comes from embedded
 third-party content.
