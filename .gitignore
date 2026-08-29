@@ -1,0 +1,35 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Test and quality-tool output
+/.phpunit.cache/
+/.phpunit.result.cache
+/coverage/
+/.cache/
+/.php-cs-fixer.cache
+/.phpcs-cache
+
+# Local environment and secrets
+/.env
+/.env.*
+!/.env.example
+/.ddev/
+/.lando.local.yml
+
+# Editor and IDE metadata
+/.idea/
+/.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Logs and generated packages
+*.log
+*.tar.gz
+*.zip
