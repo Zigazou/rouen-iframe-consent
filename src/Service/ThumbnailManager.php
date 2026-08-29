@@ -17,7 +17,6 @@ use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\Queue\QueueFactory;
-use Drupal\Core\Queue\RequeueException;
 use Drupal\media\OEmbed\ResourceFetcherInterface;
 use Drupal\media\OEmbed\UrlResolverInterface;
 use Drupal\rouen_iframe_consent\ValueObject\ParsedIframe;
@@ -284,8 +283,6 @@ final class ThumbnailManager {
    * @param int $recordId
    *   The ID of the thumbnail record to process.
    *
-   * @throws \Drupal\Core\Queue\RequeueException
-   *   If the download should be retried later.
    * @throws \RuntimeException
    *   If the download fails permanently.
    * @throws \Throwable
@@ -436,14 +433,6 @@ final class ThumbnailManager {
           '@message' => $exception->getMessage(),
         ]
       );
-
-      if ($attempts < 3) {
-        throw new RequeueException(
-          'Thumbnail retrieval will be retried.',
-          0,
-          $exception
-        );
-      }
 
       $this->markFailed($recordId, $record->source_hash);
     }

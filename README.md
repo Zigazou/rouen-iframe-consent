@@ -38,8 +38,8 @@ never renders invalid iframe source URLs.
 When an entity containing a protected iframe is saved or first rendered, the
 module queues an oEmbed lookup. Cron downloads supported JPEG, PNG, GIF, or WebP
 thumbnails to `public://rouen_iframe_consent/thumbnails`. Downloads are limited
-to 5 MiB and retried up to three times. Unsupported providers use the globally
-configured image or the bundled fallback.
+to 5 MiB and attempted once. Unsupported providers use the globally configured
+image or the bundled fallback.
 
 Thumbnail records and files are removed when the iframe field item disappears,
 the iframe URL changes, the formatter no longer applies on the next entity save,
