@@ -19,6 +19,15 @@ final class SettingsForm extends ConfigFormBase {
 
   /**
    * Creates the settings form.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The config factory.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   The entity type manager.
+   * @param \Drupal\file\FileUsage\FileUsageInterface $fileUsage
+   *   The file usage service.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typedConfigManager
+   *   The typed config manager.
    */
   public function __construct(
     ConfigFactoryInterface $configFactory,
