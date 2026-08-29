@@ -15,6 +15,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
  */
 final class IframeParserTest extends UnitTestCase {
 
+  /**
+   * The iframe parser service.
+   *
+   * @var \Drupal\rouen_iframe_consent\Service\IframeParser
+   */
   private IframeParser $parser;
 
   /**
@@ -29,12 +34,31 @@ final class IframeParserTest extends UnitTestCase {
    * Tests extraction and removal of unsafe or irrelevant attributes.
    */
   public function testSafeExtraction(): void {
-    $html = '<p>Discard me</p><iframe src="https://www.youtube.com/embed/abc_123" width="640" height="360" title="A video" allow="autoplay; fullscreen" allowfullscreen onclick="alert(1)" srcdoc="bad"></iframe><script>alert(1)</script>';
+    $html = '
+      <p>Discard me</p>
+      <iframe src="https://www.youtube.com/embed/abc_123"
+        width="640"
+        height="360"
+        title="A video"
+        allow="autoplay; fullscreen"
+        allowfullscreen
+        onclick="alert(1)"
+        srcdoc="bad"
+      >
+      </iframe>
+      <script>alert(1)</script>';
+
     $iframe = $this->parser->parse($html);
 
     self::assertNotNull($iframe);
-    self::assertSame('https://www.youtube.com/embed/abc_123', $iframe->sourceUrl);
-    self::assertSame('https://www.youtube.com/watch?v=abc_123', $iframe->thumbnailLookupUrl);
+    self::assertSame(
+      'https://www.youtube.com/embed/abc_123',
+      $iframe->sourceUrl
+    );
+    self::assertSame(
+      'https://www.youtube.com/watch?v=abc_123',
+      $iframe->thumbnailLookupUrl
+    );
     self::assertSame('YouTube', $iframe->providerName);
     self::assertSame(640, $iframe->width);
     self::assertSame(360, $iframe->height);
@@ -45,11 +69,12 @@ final class IframeParserTest extends UnitTestCase {
 
   /**
    * Tests rejection of executable and credential-bearing source URLs.
-   *
    */
   #[DataProvider('unsafeUrlProvider')]
   public function testUnsafeUrlsAreRejected(string $url): void {
-    self::assertNull($this->parser->parse('<iframe src="' . $url . '"></iframe>'));
+    self::assertNull(
+      $this->parser->parse('<iframe src="' . $url . '"></iframe>')
+    );
   }
 
   /**
@@ -71,7 +96,14 @@ final class IframeParserTest extends UnitTestCase {
    * Tests dimensions, sandbox tokens, and protocol-relative URLs.
    */
   public function testAttributeNormalization(): void {
-    $iframe = $this->parser->parse('<iframe src="//player.vimeo.com/video/42" width="100%" height="0" sandbox="allow-scripts unknown-token"></iframe>');
+    $html = '
+      <iframe
+        src="//player.vimeo.com/video/42"
+        width="100%"
+        height="0"
+        sandbox="allow-scripts unknown-token"
+      ></iframe>';
+    $iframe = $this->parser->parse($html);
 
     self::assertNotNull($iframe);
     self::assertSame('https://player.vimeo.com/video/42', $iframe->sourceUrl);
@@ -85,9 +117,17 @@ final class IframeParserTest extends UnitTestCase {
    * Tests exact and parent-domain trust matching.
    */
   public function testTrustedHosts(): void {
-    self::assertTrue($this->parser->isTrustedHost('media.example.org', ['example.org']));
-    self::assertTrue($this->parser->isTrustedHost('example.org', ['example.org']));
-    self::assertFalse($this->parser->isTrustedHost('evil-example.org', ['example.org']));
+    self::assertTrue(
+      $this->parser->isTrustedHost('media.example.org', ['example.org'])
+    );
+
+    self::assertTrue(
+      $this->parser->isTrustedHost('example.org', ['example.org'])
+    );
+
+    self::assertFalse(
+      $this->parser->isTrustedHost('evil-example.org', ['example.org'])
+    );
   }
 
 }

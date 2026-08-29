@@ -12,8 +12,20 @@ final readonly class ParsedIframe {
   /**
    * Creates parsed iframe data.
    *
-   * @param array<string, string|bool> $attributes
-   *   Safe iframe attributes.
+   * @param string $sourceUrl
+   *   The iframe source URL.
+   * @param string $thumbnailLookupUrl
+   *   The URL to retrieve a thumbnail for the iframe.
+   * @param string $host
+   *   The iframe source host name.
+   * @param string $providerName
+   *   The iframe provider name.
+   * @param int $width
+   *   The iframe width in pixels.
+   * @param int $height
+   *   The iframe height in pixels.
+   * @param array<string, string> $attributes
+   *   The iframe attributes.
    */
   public function __construct(
     public string $sourceUrl,
@@ -27,10 +39,12 @@ final readonly class ParsedIframe {
 
   /**
    * Returns a stable hash of the iframe source.
+   *
+   * @return string
+   *   A SHA-256 hash of the iframe source URL.
    */
   public function getSourceHash(): string {
     return hash('sha256', $this->sourceUrl);
   }
 
 }
-
