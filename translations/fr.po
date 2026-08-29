@@ -1,0 +1,94 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Rouen Iframe Consent 1.0.0\n"
+"POT-Creation-Date: 2026-08-29 00:00+0200\n"
+"PO-Revision-Date: 2026-08-29 00:00+0200\n"
+"Last-Translator: Rouen Iframe Consent contributors\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: rouen_iframe_consent.info.yml:1
+#: rouen_iframe_consent.links.menu.yml:2
+#: rouen_iframe_consent.routing.yml:5
+msgid "Rouen Iframe Consent"
+msgstr "Consentement aux iframes de Rouen"
+
+#: rouen_iframe_consent.info.yml:3
+msgid "Displays privacy-preserving consent placeholders before loading third-party iframes."
+msgstr "Affiche des écrans de consentement respectueux de la vie privée avant le chargement d’iframes tierces."
+
+#: rouen_iframe_consent.info.yml:4
+msgid "Custom"
+msgstr "Personnalisé"
+
+#: rouen_iframe_consent.permissions.yml:2
+msgid "Administer Rouen Iframe Consent"
+msgstr "Administrer Consentement aux iframes de Rouen"
+
+#: rouen_iframe_consent.permissions.yml:3
+msgid "Configure the iframe consent allowlist and fallback image."
+msgstr "Configurer la liste des sites autorisés et l’image de remplacement pour le consentement aux iframes."
+
+#: rouen_iframe_consent.links.menu.yml:3
+msgid "Configure iframe consent placeholders and trusted sites."
+msgstr "Configurer les écrans de consentement des iframes et les sites de confiance."
+
+#: config/schema/rouen_iframe_consent.schema.yml:3
+msgid "Rouen Iframe Consent settings"
+msgstr "Paramètres de Consentement aux iframes de Rouen"
+
+#: config/schema/rouen_iframe_consent.schema.yml:7
+msgid "Trusted hosts"
+msgstr "Hôtes de confiance"
+
+#: config/schema/rouen_iframe_consent.schema.yml:10
+msgid "Host"
+msgstr "Hôte"
+
+#: config/schema/rouen_iframe_consent.schema.yml:13
+msgid "Fallback image file ID"
+msgstr "Identifiant du fichier de l’image de remplacement"
+
+#: src/Plugin/QueueWorker/ThumbnailQueueWorker.php:19
+msgid "Rouen Iframe Consent thumbnail retrieval"
+msgstr "Récupération des miniatures de Consentement aux iframes de Rouen"
+
+#: src/Plugin/Field/FieldFormatter/RouenIframeConsentFormatter.php:26
+msgid "Iframe with individual consent"
+msgstr "Iframe avec consentement individuel"
+
+#: src/Plugin/Field/FieldFormatter/RouenIframeConsentFormatter.php:107
+msgid "External content from @provider"
+msgstr "Contenu externe provenant de @provider"
+
+#: src/Plugin/Field/FieldFormatter/RouenIframeConsentFormatter.php:160
+msgid "This content is hosted by @provider. Loading it may allow this service to store cookies on your device."
+msgstr "Ce contenu est hébergé par @provider. Son chargement peut autoriser ce service à enregistrer des cookies sur votre appareil."
+
+#: src/Plugin/Field/FieldFormatter/RouenIframeConsentFormatter.php:163
+msgid "I accept"
+msgstr "J’accepte"
+
+#: src/Form/SettingsForm.php:94
+msgid "Trusted sites"
+msgstr "Sites de confiance"
+
+#: src/Form/SettingsForm.php:96
+msgid "Enter one host name per line, without a path (for example, media.example.org). Iframes from these hosts and their subdomains are loaded without asking for consent."
+msgstr "Saisissez un nom d’hôte par ligne, sans chemin (par exemple media.example.org). Les iframes provenant de ces hôtes et de leurs sous-domaines sont chargées sans demander de consentement."
+
+#: src/Form/SettingsForm.php:105
+msgid "Generic preview image"
+msgstr "Image d’aperçu générique"
+
+#: src/Form/SettingsForm.php:107
+msgid "Used when the external service does not expose an oEmbed thumbnail. Leave empty to use the image supplied with the module."
+msgstr "Utilisée lorsque le service externe ne fournit pas de miniature oEmbed. Laissez ce champ vide pour utiliser l’image fournie avec le module."
+
+#: src/Form/SettingsForm.php:144
+msgid "%host is not a valid host name."
+msgstr "%host n’est pas un nom d’hôte valide."
