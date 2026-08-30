@@ -148,6 +148,7 @@ final class RouenIframeConsentFormatter extends FormatterBase implements Contain
         continue;
       }
 
+      // If the parsed embed is not an iframe, skip this item.
       if (!$parsed instanceof ParsedIframe) {
         continue;
       }

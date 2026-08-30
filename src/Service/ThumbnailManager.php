@@ -1042,7 +1042,12 @@ final class ThumbnailManager {
         'allow_redirects' => FALSE,
         'connect_timeout' => $connect_timeout,
         'timeout' => $timeout,
-        'headers' => ['Accept' => 'image/jpeg,image/png,image/gif,image/webp'],
+        'headers' => [
+          'Accept' => implode(
+            ',',
+            array_keys(self::THUMBNAIL_TYPES)
+          ),
+        ],
       ]);
 
       $status = $response->getStatusCode();

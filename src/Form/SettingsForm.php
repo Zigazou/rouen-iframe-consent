@@ -121,8 +121,8 @@ final class SettingsForm extends ConfigFormBase {
         'Use @provider where the external service name should appear.'
       ),
       '#default_value' => $config->get('consent_message')
-        ?? 'This content is hosted by @provider. Loading it may allow this ' .
-        'service to store cookies on your device.',
+      ?? 'This content is hosted by @provider. Loading it may allow this ' .
+      'service to store cookies on your device.',
       '#required' => TRUE,
       '#rows' => 3,
     ];
@@ -172,7 +172,7 @@ final class SettingsForm extends ConfigFormBase {
       '#title' => $this->t('Maximum remote thumbnail size'),
       '#description' => $this->t('Maximum downloaded file size in bytes.'),
       '#default_value' => $config->get('remote_thumbnail_max_size')
-        ?? 5_242_880,
+      ?? 5_242_880,
       '#required' => TRUE,
       '#min' => 1,
       '#step' => 1,

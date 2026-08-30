@@ -13,18 +13,20 @@ use GuzzleHttp\Psr7\UriResolver;
 final class PreviewUrlExtractor {
 
   /**
-   * The uppercase letters for case-insensitive XPath queries.
+   * XPath queries to extract image URLs from metadata and elements.
    *
-   * @var string
+   * @var string[]
    */
-  private const UPPERCASE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-  /**
-   * The lowercase letters for case-insensitive XPath queries.
-   *
-   * @var string
-   */
-  private const LOWERCASE_LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+  private const XPATH_QUERIES = [
+    '//meta[translate(@property, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")="og:image"]/@content',
+    '//meta[translate(@property, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")="og:image:url"]/@content',
+    '//meta[translate(@name, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")="twitter:image"]/@content',
+    '//meta[translate(@itemprop, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")="image"]/@content',
+    '//link[translate(@rel, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")="image_src"]/@href',
+    '//video/@poster',
+    '//img/@src',
+    '//img/@data-src',
+  ];
 
   /**
    * Extracts image URLs in preferred metadata-first order.
@@ -53,40 +55,10 @@ final class PreviewUrlExtractor {
     // Use XPath to query for image URLs in metadata and elements.
     $xpath = new \DOMXPath($document);
     $urls = [];
-    $queries = [
-      sprintf(
-        '//meta[translate(@property, "%s", "%s")="og:image"]/@content',
-        self::UPPERCASE_LETTERS,
-        self::LOWERCASE_LETTERS,
-      ),
-      sprintf(
-        '//meta[translate(@property, "%s", "%s")="og:image:url"]/@content',
-        self::UPPERCASE_LETTERS,
-        self::LOWERCASE_LETTERS,
-      ),
-      sprintf(
-        '//meta[translate(@name, "%s", "%s")="twitter:image"]/@content',
-        self::UPPERCASE_LETTERS,
-        self::LOWERCASE_LETTERS,
-      ),
-      sprintf(
-        '//meta[translate(@itemprop, "%s", "%s")="image"]/@content',
-        self::UPPERCASE_LETTERS,
-        self::LOWERCASE_LETTERS,
-      ),
-      sprintf(
-        '//link[translate(@rel, "%s", "%s")="image_src"]/@href',
-        self::UPPERCASE_LETTERS,
-        self::LOWERCASE_LETTERS,
-      ),
-      '//video/@poster',
-      '//img/@src',
-      '//img/@data-src',
-    ];
 
     // Iterate over the XPath queries and extract URLs, skipping icon-like
     // elements if requested.
-    foreach ($queries as $query) {
+    foreach (self::XPATH_QUERIES as $query) {
       $nodes = $xpath->query($query);
       if ($nodes === FALSE) {
         continue;
