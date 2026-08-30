@@ -17,11 +17,16 @@ final class ThumbnailRepository {
 
   /**
    * The database table for thumbnail records.
+   *
+   * @var string
    */
   private const TABLE = 'rouen_iframe_consent_thumbnail';
 
   /**
    * Creates the thumbnail repository.
+   *
+   * @param \Drupal\Core\Database\Connection $database
+   *   The database connection.
    */
   public function __construct(
     private readonly Connection $database,
@@ -29,6 +34,16 @@ final class ThumbnailRepository {
 
   /**
    * Finds a record by its entity field location.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity containing the field.
+   * @param string $fieldName
+   *   The field name containing the iframe.
+   * @param int $delta
+   *   The delta of the field item.
+   *
+   * @return \Drupal\rouen_iframe_consent\ValueObject\ThumbnailRecord|null
+   *   The matching thumbnail record, or NULL if not found.
    */
   public function find(
     EntityInterface $entity,
@@ -46,6 +61,12 @@ final class ThumbnailRepository {
 
   /**
    * Finds a record by its primary key.
+   *
+   * @param int $id
+   *   The ID of the thumbnail record.
+   *
+   * @return \Drupal\rouen_iframe_consent\ValueObject\ThumbnailRecord|null
+   *   The matching thumbnail record, or NULL if not found.
    */
   public function findById(int $id): ?ThumbnailRecord {
     $record = $this->database
@@ -60,6 +81,20 @@ final class ThumbnailRepository {
 
   /**
    * Creates a pending record and returns its ID.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity containing the field.
+   * @param string $fieldName
+   *   The field name containing the iframe.
+   * @param int $delta
+   *   The delta of the field item.
+   * @param \Drupal\rouen_iframe_consent\ValueObject\ParsedIframe $iframe
+   *   The parsed iframe data.
+   * @param string $sourceHash
+   *   The hash of the iframe source URL.
+   *
+   * @return int
+   *   The ID of the newly created thumbnail record.
    */
   public function createPending(
     EntityInterface $entity,
@@ -83,6 +118,18 @@ final class ThumbnailRepository {
 
   /**
    * Resets an existing record for a new thumbnail source.
+   *
+   * This method updates the record to reflect the new source URL and hash, and
+   * sets its status back to 'pending'.
+   *
+   * @param \Drupal\rouen_iframe_consent\ValueObject\ThumbnailRecord $record
+   *   The existing thumbnail record to reset.
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity containing the field.
+   * @param \Drupal\rouen_iframe_consent\ValueObject\ParsedIframe $iframe
+   *   The parsed iframe data with the new source.
+   * @param string $sourceHash
+   *   The new hash of the iframe source URL.
    */
   public function resetPending(
     ThumbnailRecord $record,
@@ -107,6 +154,14 @@ final class ThumbnailRepository {
 
   /**
    * Updates the source URL without changing the thumbnail state.
+   *
+   * This is useful for cases where the source URL changes but the thumbnail
+   * remains valid.
+   *
+   * @param int $id
+   *   The ID of the thumbnail record to update.
+   * @param string $sourceUrl
+   *   The new source URL to set.
    */
   public function updateSourceUrl(int $id, string $sourceUrl): void {
     $this->database
@@ -118,6 +173,12 @@ final class ThumbnailRepository {
 
   /**
    * Marks an unknown state as pending again.
+   *
+   * This is useful for cases where the thumbnail generation failed or was
+   * interrupted, and we want to retry.
+   *
+   * @param int $id
+   *   The ID of the thumbnail record to mark as pending.
    */
   public function markPending(int $id): void {
     $this->database
@@ -129,6 +190,12 @@ final class ThumbnailRepository {
 
   /**
    * Touches a pending record before processing begins.
+   *
+   * This updates the 'changed' timestamp to prevent other workers from
+   * processing the same record simultaneously.
+   *
+   * @param int $id
+   *   The ID of the thumbnail record to touch.
    */
   public function touch(int $id): void {
     $this->database
@@ -140,6 +207,19 @@ final class ThumbnailRepository {
 
   /**
    * Marks a pending record as ready if its source has not changed.
+   *
+   * If the source hash does not match, the record is not updated and the method
+   * returns FALSE. If the update is successful, the method returns TRUE.
+   *
+   * @param int $id
+   *   The ID of the thumbnail record to mark as ready.
+   * @param string $sourceHash
+   *   The expected source hash of the thumbnail record.
+   * @param string $uri
+   *   The URI of the generated thumbnail file.
+   *
+   * @return bool
+   *   TRUE if the record was successfully marked as ready, FALSE otherwise.
    */
   public function markReady(
     int $id,
@@ -163,6 +243,13 @@ final class ThumbnailRepository {
 
   /**
    * Marks a pending record as permanently failed.
+   *
+   * This is used when thumbnail generation fails and should not be retried.
+   *
+   * @param int $id
+   *   The ID of the thumbnail record to mark as failed.
+   * @param string $sourceHash
+   *   The expected source hash of the thumbnail record.
    */
   public function markFailed(int $id, string $sourceHash): void {
     $this->database
@@ -198,6 +285,11 @@ final class ThumbnailRepository {
   /**
    * Finds records for translations outside the supplied language list.
    *
+   * This is useful for cleaning up thumbnail records when translations are
+   * removed.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity containing the field.
    * @param string[] $langcodes
    *   Existing entity language codes.
    *
@@ -240,6 +332,12 @@ final class ThumbnailRepository {
 
   /**
    * Deletes a record.
+   *
+   * This is used when the associated entity or translation is deleted, or when
+   * a thumbnail is no longer needed.
+   *
+   * @param \Drupal\rouen_iframe_consent\ValueObject\ThumbnailRecord $record
+   *   The thumbnail record to delete.
    */
   public function delete(ThumbnailRecord $record): void {
     $this->database
@@ -251,8 +349,20 @@ final class ThumbnailRepository {
   /**
    * Builds the logical key for a thumbnail record.
    *
-   * @return array<string, int|string>
-   *   The database key fields.
+   * This key is used to uniquely identify a thumbnail record based on its
+   * associated entity, field, and delta.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity containing the field.
+   * @param string $fieldName
+   *   The field name containing the iframe.
+   * @param int $delta
+   *   The delta of the field item.
+   *
+   * @return array<string, mixed>
+   *   An associative array representing the logical key of the thumbnail
+   *   record. The keys are 'entity_type', 'entity_uuid', 'langcode',
+   *   'field_name', and 'delta'.
    */
   private function recordKeys(
     EntityInterface $entity,
@@ -270,6 +380,12 @@ final class ThumbnailRepository {
 
   /**
    * Maps one database result to a typed record.
+   *
+   * @param object|false $record
+   *   The raw database result, or FALSE if no record was found.
+   *
+   * @return \Drupal\rouen_iframe_consent\ValueObject\ThumbnailRecord|null
+   *   The typed record, or NULL if no record was found.
    */
   private function map(object|false $record): ?ThumbnailRecord {
     return $record === FALSE
