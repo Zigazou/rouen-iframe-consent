@@ -52,7 +52,7 @@ final readonly class ThumbnailRecord {
 
   /**
    * Creates a thumbnail record.
-   * 
+   *
    * @param int $id
    *   The unique ID of the thumbnail record.
    * @param string $entityType
