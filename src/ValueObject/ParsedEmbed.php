@@ -36,6 +36,9 @@ abstract readonly class ParsedEmbed {
 
   /**
    * Returns a stable hash of the external source.
+   *
+   * @return string
+   *   A SHA-256 hash of the source URL.
    */
   public function getSourceHash(): string {
     return hash('sha256', $this->sourceUrl);

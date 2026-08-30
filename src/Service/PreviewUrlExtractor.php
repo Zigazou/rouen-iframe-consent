@@ -98,10 +98,15 @@ final class PreviewUrlExtractor {
    * Responsive candidates are returned from largest to smallest so the best
    * available preview is attempted first.
    *
+   * @param \DOMNode $node
+   *   The DOM node to extract URLs from.
+   *
    * @return string[]
    *   Attribute URLs in preference order.
    */
   private function nodeUrls(\DOMNode $node): array {
+    // If the node is not an attribute or is not a srcset attribute, return its
+    // value as a single URL.
     if (!$node instanceof \DOMAttr
       || !in_array(strtolower($node->name), ['srcset', 'data-srcset'], TRUE)
     ) {
@@ -109,6 +114,8 @@ final class PreviewUrlExtractor {
       return $value === '' ? [] : [$value];
     }
 
+    // Iterate over the srcset candidates, parsing their descriptors and sorting
+    // by priority and position.
     $candidates = [];
     foreach (explode(',', $node->value) as $position => $candidate) {
       $candidate = trim($candidate);
@@ -137,6 +144,7 @@ final class PreviewUrlExtractor {
       }
     }
 
+    // Sort the candidates by priority (descending) and position (ascending).
     usort(
       $candidates,
       static fn(array $left, array $right): int =>
@@ -144,6 +152,7 @@ final class PreviewUrlExtractor {
         ?: $left['position'] <=> $right['position'],
     );
 
+    // Return the sorted URLs in preference order.
     return array_column($candidates, 'url');
   }
 

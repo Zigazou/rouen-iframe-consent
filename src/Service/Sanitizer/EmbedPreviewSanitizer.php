@@ -101,22 +101,27 @@ final class EmbedPreviewSanitizer {
     \DOMNode $source,
     \DOMDocument $document,
   ): ?\DOMNode {
+    // If the source is a text node, copy it directly.
     if ($source instanceof \DOMText) {
       return $document->createTextNode($source->data);
     }
 
+    // If the source is not an element, return NULL.
     if (!$source instanceof \DOMElement) {
       return NULL;
     }
 
+    // If the source element is not in the allowed list, return NULL.
     $tag = strtolower($source->tagName);
     if (!in_array($tag, self::ALLOWED_ELEMENTS, TRUE)) {
       return NULL;
     }
 
+    // Create a new element in the target document and copy attributes.
     $copy = $document->createElement($tag);
     $this->copyAttributes($source, $copy);
 
+    // Recursively copy child nodes.
     foreach ($source->childNodes as $child) {
       $safe_child = $this->copyNode($child, $document);
       if ($safe_child !== NULL) {
