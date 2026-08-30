@@ -44,24 +44,87 @@ services:
 
   Drupal\rouen_iframe_consent\Service\PreviewUrlExtractor: {}
 
-  rouen_iframe_consent.thumbnail_manager:
-    class: Drupal\rouen_iframe_consent\Service\ThumbnailManager
+  Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailRepository:
     arguments:
       - '@database'
+
+  Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailQueue:
+    arguments:
       - '@queue'
+
+  Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailSourceHasher: {}
+
+  Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailFileStorage:
+    arguments:
       - '@file_system'
       - '@file_url_generator'
-      - '@entity_type.manager'
-      - '@entity_display.repository'
-      - '@rouen_iframe_consent.iframe_parser'
-      - '@cache_tags.invalidator'
-      - '@logger.channel.rouen_iframe_consent'
-      - '@media.oembed.url_resolver'
-      - '@media.oembed.resource_fetcher'
+
+  Drupal\rouen_iframe_consent\Service\Remote\SafeRemoteHttpClient:
+    arguments:
       - '@http_client'
       - '@config.factory'
       - '@rouen_iframe_consent.remote_url_validator'
+
+  Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailDownloader:
+    arguments:
+      - '@Drupal\rouen_iframe_consent\Service\Remote\SafeRemoteHttpClient'
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailFileStorage'
       - '@Drupal\rouen_iframe_consent\Service\PreviewUrlExtractor'
+      - '@logger.channel.rouen_iframe_consent'
+
+  Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailDownloaderInterface:
+    alias: 'Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailDownloader'
+
+  Drupal\rouen_iframe_consent\Service\Preview\FacebookPreviewProvider:
+    arguments:
+      - '@media.oembed.url_resolver'
+      - '@media.oembed.resource_fetcher'
+      - '@Drupal\rouen_iframe_consent\Service\PreviewUrlExtractor'
+      - '@logger.channel.rouen_iframe_consent'
+    tags:
+      - { name: rouen_iframe_consent.preview_provider, priority: 100 }
+
+  Drupal\rouen_iframe_consent\Service\Preview\OEmbedPreviewProvider:
+    arguments:
+      - '@media.oembed.url_resolver'
+      - '@media.oembed.resource_fetcher'
+    tags:
+      - { name: rouen_iframe_consent.preview_provider, priority: -100 }
+
+  Drupal\rouen_iframe_consent\Service\Preview\PreviewResolver:
+    arguments:
+      - !tagged_iterator rouen_iframe_consent.preview_provider
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailDownloaderInterface'
+      - '@Drupal\rouen_iframe_consent\Service\Remote\SafeRemoteHttpClient'
+      - '@Drupal\rouen_iframe_consent\Service\PreviewUrlExtractor'
+      - '@logger.channel.rouen_iframe_consent'
+
+  rouen_iframe_consent.thumbnail_manager:
+    class: Drupal\rouen_iframe_consent\Service\ThumbnailManager
+    arguments:
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailRepository'
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailQueue'
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailSourceHasher'
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailFileStorage'
 
   Drupal\rouen_iframe_consent\Service\ThumbnailManager:
     alias: 'rouen_iframe_consent.thumbnail_manager'
+
+  Drupal\rouen_iframe_consent\Service\ThumbnailProcessor:
+    arguments:
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailRepository'
+      - '@Drupal\rouen_iframe_consent\Service\Preview\PreviewResolver'
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailFileStorage'
+      - '@entity_type.manager'
+      - '@cache_tags.invalidator'
+      - '@logger.channel.rouen_iframe_consent'
+      - '@config.factory'
+
+  Drupal\rouen_iframe_consent\Service\ThumbnailEntitySynchronizer:
+    arguments:
+      - '@rouen_iframe_consent.thumbnail_manager'
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailRepository'
+      - '@Drupal\rouen_iframe_consent\Service\Thumbnail\ThumbnailFileStorage'
+      - '@rouen_iframe_consent.iframe_parser'
+      - '@entity_display.repository'
+      - '@config.factory'

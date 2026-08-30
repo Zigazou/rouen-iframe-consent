@@ -8,7 +8,7 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Queue\Attribute\QueueWorker;
 use Drupal\Core\Queue\QueueWorkerBase;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\rouen_iframe_consent\Service\ThumbnailManager;
+use Drupal\rouen_iframe_consent\Service\ThumbnailProcessor;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -23,12 +23,21 @@ final class ThumbnailQueueWorker extends QueueWorkerBase implements ContainerFac
 
   /**
    * Creates the queue worker.
+   *
+   * @param array $configuration
+   *   The plugin configuration.
+   * @param string $plugin_id
+   *   The plugin ID.
+   * @param mixed $plugin_definition
+   *   The plugin definition.
+   * @param \Drupal\rouen_iframe_consent\Service\ThumbnailProcessor $thumbnailProcessor
+   *   The thumbnail processor service.
    */
   public function __construct(
     array $configuration,
     string $plugin_id,
     mixed $plugin_definition,
-    private readonly ThumbnailManager $thumbnailManager,
+    private readonly ThumbnailProcessor $thumbnailProcessor,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
   }
@@ -46,7 +55,7 @@ final class ThumbnailQueueWorker extends QueueWorkerBase implements ContainerFac
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('rouen_iframe_consent.thumbnail_manager'),
+      $container->get(ThumbnailProcessor::class),
     );
   }
 
@@ -55,7 +64,7 @@ final class ThumbnailQueueWorker extends QueueWorkerBase implements ContainerFac
    */
   public function processItem($data): void {
     if (is_array($data) && isset($data['record_id'])) {
-      $this->thumbnailManager->processThumbnail((int) $data['record_id']);
+      $this->thumbnailProcessor->process((int) $data['record_id']);
     }
   }
 

@@ -6,7 +6,7 @@ namespace Drupal\rouen_iframe_consent\Hook;
 
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Hook\Attribute\Hook;
-use Drupal\rouen_iframe_consent\Service\ThumbnailManager;
+use Drupal\rouen_iframe_consent\Service\ThumbnailEntitySynchronizer;
 
 /**
  * Hook implementations for Rouen Iframe Consent.
@@ -16,11 +16,11 @@ final class RouenIframeConsentHooks {
   /**
    * Creates the hook implementation service.
    *
-   * @param \Drupal\rouen_iframe_consent\Service\ThumbnailManager $thumbnailManager
-   *   The thumbnail manager service.
+   * @param \Drupal\rouen_iframe_consent\Service\ThumbnailEntitySynchronizer $thumbnailSynchronizer
+   *   The thumbnail entity synchronizer.
    */
   public function __construct(
-    private readonly ThumbnailManager $thumbnailManager,
+    private readonly ThumbnailEntitySynchronizer $thumbnailSynchronizer,
   ) {}
 
   /**
@@ -90,7 +90,7 @@ final class RouenIframeConsentHooks {
    */
   #[Hook('entity_delete')]
   public function entityDelete(EntityInterface $entity): void {
-    $this->thumbnailManager->deleteForEntity($entity);
+    $this->thumbnailSynchronizer->delete($entity);
   }
 
   /**
@@ -103,7 +103,7 @@ final class RouenIframeConsentHooks {
     if (!$entity->getEntityType()->isRevisionable() ||
       $entity->isDefaultRevision()
     ) {
-      $this->thumbnailManager->syncEntity($entity);
+      $this->thumbnailSynchronizer->sync($entity);
     }
   }
 
