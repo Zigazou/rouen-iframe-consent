@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Drupal\Tests\rouen_iframe_consent\Unit;
 
 use Drupal\rouen_iframe_consent\Service\IframeParser;
+use Drupal\rouen_iframe_consent\Service\Parser\BlockquoteEmbedParser;
+use Drupal\rouen_iframe_consent\Service\Parser\IframeElementParser;
+use Drupal\rouen_iframe_consent\Service\Sanitizer\EmbedPreviewSanitizer;
+use Drupal\rouen_iframe_consent\Service\Security\EmbedUrlValidator;
 use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\DailymotionThumbnailLookupUrlHandler;
 use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\FacebookThumbnailLookupUrlHandler;
 use Drupal\rouen_iframe_consent\Service\ThumbnailLookupUrlHandler\InstagramThumbnailLookupUrlHandler;
@@ -34,14 +38,33 @@ final class IframeParserTest extends UnitTestCase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->parser = new IframeParser([
+    $this->parser = $this->createParser();
+  }
+
+  /**
+   * Creates the parser and its collaborators for unit tests.
+   */
+  private function createParser(
+    ?\Drupal\Core\Config\ConfigFactoryInterface $configFactory = NULL,
+  ): IframeParser {
+    $url_validator = new EmbedUrlValidator();
+    $handlers = [
       new YouTubeThumbnailLookupUrlHandler(),
       new DailymotionThumbnailLookupUrlHandler(),
       new VimeoThumbnailLookupUrlHandler(),
       new FacebookThumbnailLookupUrlHandler(),
       new InstagramThumbnailLookupUrlHandler(),
       new XThumbnailLookupUrlHandler(),
-    ]);
+    ];
+
+    return new IframeParser(
+      new IframeElementParser($handlers, $url_validator, $configFactory),
+      new BlockquoteEmbedParser(
+        $url_validator,
+        new EmbedPreviewSanitizer($url_validator),
+        $configFactory,
+      ),
+    );
   }
 
   /**
@@ -151,7 +174,7 @@ final class IframeParserTest extends UnitTestCase {
         'default_height' => 450,
       ],
     ]);
-    $parser = new IframeParser([], $config_factory);
+    $parser = $this->createParser($config_factory);
 
     $iframe = $parser->parse(
       '<iframe src="https://example.com/embed"></iframe>'

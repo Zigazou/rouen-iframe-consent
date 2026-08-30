@@ -12,22 +12,20 @@ use Drupal\rouen_iframe_consent\ValueObject\ParsedIframe;
 final class ThumbnailSourceHasher {
 
   /**
-   * Version of the Facebook preview selection strategy.
-   */
-  private const FACEBOOK_PREVIEW_VERSION = 3;
-
-  /**
    * Builds the source hash for parsed iframe data.
+   *
+   * @param \Drupal\rouen_iframe_consent\ValueObject\ParsedIframe $iframe
+   *   The parsed iframe data.
+   *
+   * @return string
+   *   The source hash.
    */
   public function hash(ParsedIframe $iframe): string {
     if ($iframe->providerName !== 'Facebook') {
       return $iframe->getSourceHash();
     }
 
-    return hash(
-      'sha256',
-      $iframe->getSourceHash() . ':' . self::FACEBOOK_PREVIEW_VERSION,
-    );
+    return hash('sha256', $iframe->getSourceHash());
   }
 
 }

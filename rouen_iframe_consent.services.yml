@@ -30,11 +30,29 @@ services:
   rouen_iframe_consent.iframe_parser:
     class: Drupal\rouen_iframe_consent\Service\IframeParser
     arguments:
-      - !tagged_iterator rouen_iframe_consent.thumbnail_lookup_url_handler
-      - '@config.factory'
+      - '@Drupal\rouen_iframe_consent\Service\Parser\IframeElementParser'
+      - '@Drupal\rouen_iframe_consent\Service\Parser\BlockquoteEmbedParser'
 
   Drupal\rouen_iframe_consent\Service\IframeParser:
     alias: 'rouen_iframe_consent.iframe_parser'
+
+  Drupal\rouen_iframe_consent\Service\Security\EmbedUrlValidator: {}
+
+  Drupal\rouen_iframe_consent\Service\Sanitizer\EmbedPreviewSanitizer:
+    arguments:
+      - '@Drupal\rouen_iframe_consent\Service\Security\EmbedUrlValidator'
+
+  Drupal\rouen_iframe_consent\Service\Parser\IframeElementParser:
+    arguments:
+      - !tagged_iterator rouen_iframe_consent.thumbnail_lookup_url_handler
+      - '@Drupal\rouen_iframe_consent\Service\Security\EmbedUrlValidator'
+      - '@config.factory'
+
+  Drupal\rouen_iframe_consent\Service\Parser\BlockquoteEmbedParser:
+    arguments:
+      - '@Drupal\rouen_iframe_consent\Service\Security\EmbedUrlValidator'
+      - '@Drupal\rouen_iframe_consent\Service\Sanitizer\EmbedPreviewSanitizer'
+      - '@config.factory'
 
   rouen_iframe_consent.remote_url_validator:
     class: Drupal\rouen_iframe_consent\Service\RemoteUrlValidator

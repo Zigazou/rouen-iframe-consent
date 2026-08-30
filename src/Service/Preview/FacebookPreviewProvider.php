@@ -18,6 +18,15 @@ final class FacebookPreviewProvider implements PreviewProviderInterface {
 
   /**
    * Creates the Facebook preview provider.
+   *
+   * @param \Drupal\media\OEmbed\UrlResolverInterface $urlResolver
+   *   The oEmbed URL resolver service.
+   * @param \Drupal\media\OEmbed\ResourceFetcherInterface $resourceFetcher
+   *   The oEmbed resource fetcher service.
+   * @param \Drupal\rouen_iframe_consent\Service\PreviewUrlExtractor $previewUrlExtractor
+   *   The preview URL extractor service.
+   * @param \Drupal\Core\Logger\LoggerChannelInterface $logger
+   *   The logger channel service.
    */
   public function __construct(
     private readonly UrlResolverInterface $urlResolver,
@@ -50,6 +59,7 @@ final class FacebookPreviewProvider implements PreviewProviderInterface {
       if ($thumbnailUrl !== NULL) {
         $imageUrls[] = $thumbnailUrl->toString();
       }
+
       $oembedHtml = $resource->getHtml() ?? '';
     }
     catch (\Throwable $exception) {
@@ -62,6 +72,7 @@ final class FacebookPreviewProvider implements PreviewProviderInterface {
       );
     }
 
+    // Extract image URLs from the oEmbed HTML, filtering out likely icon URLs.
     $imageUrls = array_merge(
       $imageUrls,
       $this->previewUrlExtractor->extractImageUrls(
@@ -70,10 +81,20 @@ final class FacebookPreviewProvider implements PreviewProviderInterface {
         TRUE,
       ),
     );
+
+    // Filter out likely icon URLs from the extracted image URLs.
+    $imageUrls = array_filter(
+      $imageUrls,
+      fn(string $url): bool =>
+        !$this->previewUrlExtractor->isLikelyIconUrl($url),
+    );
+
+    // Extract document URLs from the oEmbed HTML, including the source URL.
     $documentUrls = $this->previewUrlExtractor->extractIframeUrls(
       $oembedHtml,
       $record->iframeUrl,
     );
+
     $documentUrls[] = $record->sourceUrl ?: $record->iframeUrl;
 
     return new PreviewCandidates(

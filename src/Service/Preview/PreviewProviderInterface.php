@@ -14,11 +14,23 @@ interface PreviewProviderInterface {
 
   /**
    * Determines whether this provider handles the record.
+   *
+   * @param \Drupal\rouen_iframe_consent\ValueObject\ThumbnailRecord $record
+   *   The thumbnail record.
+   *
+   * @return bool
+   *   TRUE if this provider handles the record, FALSE otherwise.
    */
   public function supports(ThumbnailRecord $record): bool;
 
   /**
    * Finds ordered preview candidates.
+   *
+   * @param \Drupal\rouen_iframe_consent\ValueObject\ThumbnailRecord $record
+   *   The thumbnail record.
+   *
+   * @return \Drupal\rouen_iframe_consent\ValueObject\PreviewCandidates
+   *   The preview candidates.
    */
   public function findCandidates(ThumbnailRecord $record): PreviewCandidates;
 

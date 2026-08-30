@@ -24,8 +24,13 @@ final class PreviewUrlExtractor {
     '//meta[translate(@itemprop, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")="image"]/@content',
     '//link[translate(@rel, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")="image_src"]/@href',
     '//video/@poster',
+    '//source/@srcset',
+    '//img/@srcset',
+    '//img/@data-srcset',
     '//img/@src',
     '//img/@data-src',
+    '//img/@data-lazy-src',
+    '//img/@data-original',
   ];
 
   /**
@@ -71,16 +76,75 @@ final class PreviewUrlExtractor {
           continue;
         }
 
-        // Resolve the URL against the base URL and add it to the list.
-        $url = $this->absoluteUrl(trim($node->nodeValue), $baseUrl);
-        if ($url !== NULL) {
-          $urls[$url] = TRUE;
+        // Resolve each regular or responsive image URL against the base URL.
+        foreach ($this->nodeUrls($node) as $candidate) {
+          $url = $this->absoluteUrl($candidate, $baseUrl);
+          if ($url !== NULL
+            && (!$excludeIcons || !$this->isLikelyIconUrl($url))
+          ) {
+            $urls[$url] = TRUE;
+          }
         }
       }
     }
 
     // Return the unique absolute URLs as an array.
     return array_keys($urls);
+  }
+
+  /**
+   * Extracts URLs from a regular URL attribute or an srcset attribute.
+   *
+   * Responsive candidates are returned from largest to smallest so the best
+   * available preview is attempted first.
+   *
+   * @return string[]
+   *   Attribute URLs in preference order.
+   */
+  private function nodeUrls(\DOMNode $node): array {
+    if (!$node instanceof \DOMAttr
+      || !in_array(strtolower($node->name), ['srcset', 'data-srcset'], TRUE)
+    ) {
+      $value = trim($node->nodeValue);
+      return $value === '' ? [] : [$value];
+    }
+
+    $candidates = [];
+    foreach (explode(',', $node->value) as $position => $candidate) {
+      $candidate = trim($candidate);
+      if ($candidate === '') {
+        continue;
+      }
+
+      $parts = preg_split('/\s+/', $candidate, 2) ?: [];
+      $url = $parts[0] ?? '';
+      $descriptor = strtolower($parts[1] ?? '');
+      $priority = 0.0;
+
+      if (preg_match('/^(\d+)w$/', $descriptor, $matches)) {
+        $priority = (float) $matches[1];
+      }
+      elseif (preg_match('/^(\d+(?:\.\d+)?)x$/', $descriptor, $matches)) {
+        $priority = (float) $matches[1] * 100000;
+      }
+
+      if ($url !== '') {
+        $candidates[] = [
+          'url' => $url,
+          'priority' => $priority,
+          'position' => $position,
+        ];
+      }
+    }
+
+    usort(
+      $candidates,
+      static fn(array $left, array $right): int =>
+        $right['priority'] <=> $left['priority']
+        ?: $left['position'] <=> $right['position'],
+    );
+
+    return array_column($candidates, 'url');
   }
 
   /**

@@ -96,4 +96,29 @@ final class PreviewUrlExtractorTest extends UnitTestCase {
     ));
   }
 
+  /**
+   * Tests extraction of the largest responsive Facebook image candidate.
+   */
+  public function testExtractResponsiveFacebookImageUrls(): void {
+    $extractor = new PreviewUrlExtractor();
+    $html = <<<'HTML'
+      <img
+        src="https://scontent.example/v/t39.30808-1/avatar.jpg?stp=s50x50"
+        srcset="https://scontent.example/v/t39.30808-6/post-small.jpg 320w,
+          https://scontent.example/v/t39.30808-6/post-large.jpg 960w"
+        width="640"
+        height="480"
+      >
+      HTML;
+
+    self::assertSame([
+      'https://scontent.example/v/t39.30808-6/post-large.jpg',
+      'https://scontent.example/v/t39.30808-6/post-small.jpg',
+    ], $extractor->extractImageUrls(
+      $html,
+      'https://www.facebook.com/plugins/post.php',
+      TRUE,
+    ));
+  }
+
 }

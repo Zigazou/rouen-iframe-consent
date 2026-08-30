@@ -16,6 +16,11 @@ final class OEmbedPreviewProvider implements PreviewProviderInterface {
 
   /**
    * Creates the oEmbed preview provider.
+   *
+   * @param \Drupal\media\OEmbed\UrlResolverInterface $urlResolver
+   *   The oEmbed URL resolver service.
+   * @param \Drupal\media\OEmbed\ResourceFetcherInterface $resourceFetcher
+   *   The oEmbed resource fetcher service.
    */
   public function __construct(
     private readonly UrlResolverInterface $urlResolver,
