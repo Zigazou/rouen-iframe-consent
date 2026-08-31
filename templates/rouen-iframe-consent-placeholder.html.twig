@@ -7,23 +7,23 @@
 <div
   class="rouen-iframe-consent rouen-iframe-consent--{{ embed_type }}"
   style="--ric-width: {{ width }}; --ric-height: {{ height }}px;"
-  {% if embed_type == 'blockquote' %}
+  {%- if embed_type == 'blockquote' -%}
     data-rouen-embed-container
     data-script-attributes="{{ script_attributes }}"
-    {% if autoload %}data-rouen-embed-autoload{% endif %}
-  {% endif %}
+    {% if autoload -%}data-rouen-embed-autoload{%- endif -%}
+  {%- endif -%}
 >
-  {% if preview_html %}
+  {%- if preview_html -%}
     <div class="rouen-iframe-consent__preview">{{ preview_html }}</div>
-  {% endif %}
-  {% if thumbnail_url %}
+  {%- endif -%}
+  {%- if thumbnail_url -%}
     <img
       class="rouen-iframe-consent__thumbnail"
       src="{{ thumbnail_url }}"
       alt=""
     >
-  {% endif %}
-  {% if not autoload %}
+  {%- endif -%}
+  {%- if not autoload -%}
     <div class="rouen-iframe-consent__overlay">
       <p class="rouen-iframe-consent__message">{{ message }}</p>
       <button
@@ -31,10 +31,10 @@
         type="button"
         data-rouen-iframe-consent
         data-embed-type="{{ embed_type }}"
-        {% if iframe_attributes %}
+        {% if iframe_attributes -%}
           data-iframe-attributes="{{ iframe_attributes }}"
-        {% endif %}
+        {%- endif -%}
       >{{ button_label }}</button>
     </div>
-  {% endif %}
+  {%- endif -%}
 </div>
