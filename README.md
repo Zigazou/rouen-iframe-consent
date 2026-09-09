@@ -30,12 +30,17 @@ module with Composer:
 
 ```sh
 composer config repositories.rouen_iframe_consent vcs https://github.com/Zigazou/rouen-iframe-consent.git
-composer require zigazou/rouen_iframe_consent:dev-main
+composer require drupal/rouen_iframe_consent:dev-main
 ```
 
 These commands require the repository's `main` branch to contain
 `composer.json`. The module is installed according to the Drupal project's
 Composer installer paths.
+
+The package name in the Drupal project's requirements must match
+`drupal/rouen_iframe_consent`. Register the Git repository before requiring the
+package; the `drupal/` prefix alone does not make it available from Drupal's
+Composer repository. Use `dev-main` to explicitly allow the development branch.
 
 1. Enable **Rouen Iframe Consent**. For a manual installation, first place the
    module in the site's custom module directory.

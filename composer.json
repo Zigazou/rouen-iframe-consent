@@ -1,5 +1,5 @@
 {
-    "name": "zigazou/rouen_iframe_consent",
+    "name": "drupal/rouen_iframe_consent",
     "description": "Displays privacy-preserving consent placeholders before loading third-party embeds.",
     "type": "drupal-module",
     "require": {
