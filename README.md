@@ -25,8 +25,20 @@ The formatter:
 
 ## Installation and setup
 
-1. Place the module in the site's custom module directory and enable **Rouen
-   Iframe Consent**.
+From the Drupal project root, register this Git repository and install the
+module with Composer:
+
+```sh
+composer config repositories.rouen_iframe_consent vcs https://github.com/Zigazou/rouen-iframe-consent.git
+composer require zigazou/rouen_iframe_consent:dev-main
+```
+
+These commands require the repository's `main` branch to contain
+`composer.json`. The module is installed according to the Drupal project's
+Composer installer paths.
+
+1. Enable **Rouen Iframe Consent**. For a manual installation, first place the
+   module in the site's custom module directory.
 2. On the *Manage display* page for a formatted HTML text field, select
    **External embed with individual consent**.
 3. Configure the consent message, button label, default dimensions, trusted
